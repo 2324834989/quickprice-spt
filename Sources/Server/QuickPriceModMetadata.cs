@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------------
-// Show Me The Money - Mod Metadata
+// QuickPrice - Mod Metadata
 // 模组元数据定义
 // ----------------------------------------------------------------------------
 
@@ -7,33 +7,33 @@ using SPTarkov.Server.Core.Models.Spt.Mod;
 using SemanticVersioning;
 using System.Collections.Generic;
 
-namespace SwiftXP.SPT.ShowMeTheMoney.Server
+namespace QuickPrice.Server
 {
     /// <summary>
-    /// Show Me The Money 模组元数据类
+    /// QuickPrice 模组元数据类
     /// 提供模组的基本信息给SPT服务器
     /// </summary>
-    public record ShowMeTheMoneyModMetadata : AbstractModMetadata
+    public record QuickPriceModMetadata : AbstractModMetadata
     {
         /// <summary>
         /// Mod的唯一标识符
         /// </summary>
-        public override string ModGuid { get; init; } = "com.swiftxp.showmethemoney";
+        public override string ModGuid { get; init; } = "com.quickprice.spt";
 
         /// <summary>
         /// Mod的名称
         /// </summary>
-        public override string Name { get; init; } = "Show Me The Money";
+        public override string Name { get; init; } = "QuickPrice";
 
         /// <summary>
         /// Mod的作者
         /// </summary>
-        public override string Author { get; init; } = "SwiftXP";
+        public override string Author { get; init; } = "QuickPrice Team";
 
         /// <summary>
         /// Mod的版本号
         /// </summary>
-        public override SemanticVersioning.Version Version { get; init; } = SemanticVersioning.Version.Parse("2.0.0");
+        public override SemanticVersioning.Version Version { get; init; } = SemanticVersioning.Version.Parse("1.0.0");
 
         /// <summary>
         /// 支持的SPT版本范围
@@ -48,7 +48,7 @@ namespace SwiftXP.SPT.ShowMeTheMoney.Server
         /// <summary>
         /// Mod的URL
         /// </summary>
-        public override string? Url { get; init; } = "https://github.com/swiftxp-hub/spt-show-me-the-money";
+        public override string? Url { get; init; } = "https://github.com/quickprice/quickprice-spt";
 
         /// <summary>
         /// Mod的许可证

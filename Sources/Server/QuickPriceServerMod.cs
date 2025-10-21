@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------------
-// Show Me The Money - SPT 4.0.0 Server Mod
+// QuickPrice - SPT 4.0.0 Server Mod
 // 为客户端BepInEx插件提供价格数据的服务端模组
 // ----------------------------------------------------------------------------
 
@@ -11,24 +11,24 @@ using SPTarkov.DI.Annotations;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace SwiftXP.SPT.ShowMeTheMoney.Server
+namespace QuickPrice.Server
 {
     /// <summary>
-    /// Show Me The Money 服务端模组主类
+    /// QuickPrice 服务端模组主类
     /// 实现IPreSptLoadModAsync接口，在服务器启动早期阶段加载
     /// </summary>
     [Injectable(InjectionType.Singleton, null, 2147483647)]
-    public class ShowMeTheMoneyServerMod : IPreSptLoadModAsync
+    public class QuickPriceServerMod : IPreSptLoadModAsync
     {
-        private readonly ISptLogger<ShowMeTheMoneyServerMod> _logger;
-        private readonly ShowMeTheMoneyStaticRouter _staticRouter;
+        private readonly ISptLogger<QuickPriceServerMod> _logger;
+        private readonly QuickPriceStaticRouter _staticRouter;
 
         /// <summary>
         /// 构造函数，通过依赖注入获取日志记录器和自定义路由器
         /// </summary>
-        public ShowMeTheMoneyServerMod(
-            ISptLogger<ShowMeTheMoneyServerMod> logger,
-            ShowMeTheMoneyStaticRouter staticRouter)
+        public QuickPriceServerMod(
+            ISptLogger<QuickPriceServerMod> logger,
+            QuickPriceStaticRouter staticRouter)
         {
             _logger = logger;
             _staticRouter = staticRouter;
@@ -42,29 +42,29 @@ namespace SwiftXP.SPT.ShowMeTheMoney.Server
         {
             try
             {
-                _logger.Info("[Show Me The Money v2.0.0] Server mod loading...", null);
+                _logger.Info("[QuickPrice v1.0.0] Server mod loading...", null);
 
                 // 路由已通过依赖注入自动注册
-                // ShowMeTheMoneyStaticRouter 在构造时自动注册以下端点：
+                // QuickPriceStaticRouter 在构造时自动注册以下端点：
                 // 1. /showMeTheMoney/getCurrencyPurchasePrices
                 // 2. /showMeTheMoney/getStaticPriceTable
                 // 3. /showMeTheMoney/getDynamicPriceTable
 
-                _logger.Success("[Show Me The Money v2.0.0] Server mod loaded successfully. Ready to make some money...", null);
-                _logger.Info("[Show Me The Money] HTTP routes registered successfully", null);
+                _logger.Success("[QuickPrice v1.0.0] Server mod loaded successfully. Ready to make some money...", null);
+                _logger.Info("[QuickPrice] HTTP routes registered successfully", null);
             }
             catch (Exception ex)
             {
                 try
                 {
-                    _logger.Error("[Show Me The Money] PreSptLoadAsync方法发生异常", ex);
+                    _logger.Error("[QuickPrice] PreSptLoadAsync方法发生异常", ex);
                 }
                 catch
                 {
                     // 如果logger也不可用，使用备用方式
                     try
                     {
-                        Console.WriteLine("[Show Me The Money] PreSptLoadAsync方法发生异常");
+                        Console.WriteLine("[QuickPrice] PreSptLoadAsync方法发生异常");
                         Console.WriteLine(ex.Message);
                         Console.WriteLine(ex.StackTrace);
                     }
@@ -98,7 +98,7 @@ namespace SwiftXP.SPT.ShowMeTheMoney.Server
                 // var skier = _databaseService.GetTrader("58330581ace78e27b8b10cee");
 
                 // 暂时返回默认值
-                _logger.Debug("[Show Me The Money] Currency prices - EUR: 153, USD: 139", null);
+                _logger.Debug("[QuickPrice] Currency prices - EUR: 153, USD: 139", null);
 
                 return new CurrencyPurchasePrices
                 {
@@ -108,7 +108,7 @@ namespace SwiftXP.SPT.ShowMeTheMoney.Server
             }
             catch (Exception ex)
             {
-                _logger.Error($"[Show Me The Money] Error getting currency purchase prices: {ex.Message}", ex);
+                _logger.Error($"[QuickPrice] Error getting currency purchase prices: {ex.Message}", ex);
                 return new CurrencyPurchasePrices { Eur = 153, Usd = 139 };
             }
         }
@@ -123,13 +123,13 @@ namespace SwiftXP.SPT.ShowMeTheMoney.Server
                 // TODO: 需要确认4.0.0中数据库访问的正确API
                 var clonedPriceTable = new Dictionary<string, double>();
 
-                _logger.Info($"[Show Me The Money] Generated static price table with {clonedPriceTable.Count} items", null);
+                _logger.Info($"[QuickPrice] Generated static price table with {clonedPriceTable.Count} items", null);
 
                 return clonedPriceTable;
             }
             catch (Exception ex)
             {
-                _logger.Error($"[Show Me The Money] Error getting static price table: {ex.Message}", ex);
+                _logger.Error($"[QuickPrice] Error getting static price table: {ex.Message}", ex);
                 return new Dictionary<string, double>();
             }
         }
@@ -143,13 +143,13 @@ namespace SwiftXP.SPT.ShowMeTheMoney.Server
             {
                 var priceTable = GetStaticPriceTable();
 
-                _logger.Info($"[Show Me The Money] Generated dynamic price table with {priceTable.Count} items", null);
+                _logger.Info($"[QuickPrice] Generated dynamic price table with {priceTable.Count} items", null);
 
                 return priceTable;
             }
             catch (Exception ex)
             {
-                _logger.Error($"[Show Me The Money] Error getting dynamic price table: {ex.Message}", ex);
+                _logger.Error($"[QuickPrice] Error getting dynamic price table: {ex.Message}", ex);
                 return GetStaticPriceTable();
             }
         }

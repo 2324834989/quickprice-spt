@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------------
-// Show Me The Money - Custom Static Router
+// QuickPrice - Custom Static Router
 // 处理HTTP路由注册和请求处理
 // ----------------------------------------------------------------------------
 
@@ -15,24 +15,24 @@ using SPTarkov.Server.Core.Services;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace SwiftXP.SPT.ShowMeTheMoney.Server
+namespace QuickPrice.Server
 {
     /// <summary>
-    /// Show Me The Money 自定义静态路由器
+    /// QuickPrice 自定义静态路由器
     /// 继承自StaticRouter，注册HTTP端点
     /// </summary>
     [Injectable]
-    public class ShowMeTheMoneyStaticRouter : StaticRouter
+    public class QuickPriceStaticRouter : StaticRouter
     {
         private static DatabaseService? _databaseServiceStatic;
         private static RagfairOfferService? _ragfairOfferServiceStatic;
-        private static ISptLogger<ShowMeTheMoneyStaticRouter>? _loggerStatic;
+        private static ISptLogger<QuickPriceStaticRouter>? _loggerStatic;
 
-        public ShowMeTheMoneyStaticRouter(
+        public QuickPriceStaticRouter(
             JsonUtil jsonUtil,
             DatabaseService databaseService,
             RagfairOfferService ragfairOfferService,
-            ISptLogger<ShowMeTheMoneyStaticRouter> logger) : base(
+            ISptLogger<QuickPriceStaticRouter> logger) : base(
             jsonUtil,
             GetCustomRoutes()
         )
@@ -42,7 +42,7 @@ namespace SwiftXP.SPT.ShowMeTheMoney.Server
             _ragfairOfferServiceStatic = ragfairOfferService;
             _loggerStatic = logger;
 
-            logger.Info("[Show Me The Money] Custom router initialized", null);
+            logger.Info("[QuickPrice] Custom router initialized", null);
         }
 
         /// <summary>
@@ -107,11 +107,11 @@ namespace SwiftXP.SPT.ShowMeTheMoney.Server
                         // 注：实际实现取决于 DatabaseService 的 API
                         // 如果无法获取，使用默认值
 
-                        _loggerStatic?.Info($"[Show Me The Money] Currency prices queried - EUR: {eurPrice}, USD: {usdPrice}", null);
+                        _loggerStatic?.Info($"[QuickPrice] Currency prices queried - EUR: {eurPrice}, USD: {usdPrice}", null);
                     }
                     catch (Exception dbEx)
                     {
-                        _loggerStatic?.Warning($"[Show Me The Money] Could not get currency prices from database: {dbEx.Message}", null);
+                        _loggerStatic?.Warning($"[QuickPrice] Could not get currency prices from database: {dbEx.Message}", null);
                     }
                 }
 
@@ -126,8 +126,8 @@ namespace SwiftXP.SPT.ShowMeTheMoney.Server
             }
             catch (Exception ex)
             {
-                _loggerStatic?.Error($"[Show Me The Money] Error in GetCurrencyPurchasePrices: {ex.Message}", ex);
-                Console.WriteLine($"[Show Me The Money] Error in GetCurrencyPurchasePrices: {ex.Message}");
+                _loggerStatic?.Error($"[QuickPrice] Error in GetCurrencyPurchasePrices: {ex.Message}", ex);
+                Console.WriteLine($"[QuickPrice] Error in GetCurrencyPurchasePrices: {ex.Message}");
                 // 返回默认值
                 var fallback = JsonSerializer.Serialize(new CurrencyPurchasePrices { Eur = 153, Usd = 139 });
                 return new ValueTask<string>(fallback);
@@ -166,21 +166,21 @@ namespace SwiftXP.SPT.ShowMeTheMoney.Server
                                 }
                             }
 
-                            _loggerStatic?.Info($"[Show Me The Money] Static price table generated with {priceTable.Count} items", null);
+                            _loggerStatic?.Info($"[QuickPrice] Static price table generated with {priceTable.Count} items", null);
                         }
                         else
                         {
-                            _loggerStatic?.Warning("[Show Me The Money] Templates.Prices is null", null);
+                            _loggerStatic?.Warning("[QuickPrice] Templates.Prices is null", null);
                         }
                     }
                     catch (Exception dbEx)
                     {
-                        _loggerStatic?.Error($"[Show Me The Money] Error accessing database: {dbEx.Message}", dbEx);
+                        _loggerStatic?.Error($"[QuickPrice] Error accessing database: {dbEx.Message}", dbEx);
                     }
                 }
                 else
                 {
-                    _loggerStatic?.Warning("[Show Me The Money] DatabaseService is not available", null);
+                    _loggerStatic?.Warning("[QuickPrice] DatabaseService is not available", null);
                 }
 
                 var json = JsonSerializer.Serialize(priceTable);
@@ -188,8 +188,8 @@ namespace SwiftXP.SPT.ShowMeTheMoney.Server
             }
             catch (Exception ex)
             {
-                _loggerStatic?.Error($"[Show Me The Money] Error in GetStaticPriceTable: {ex.Message}", ex);
-                Console.WriteLine($"[Show Me The Money] Error in GetStaticPriceTable: {ex.Message}");
+                _loggerStatic?.Error($"[QuickPrice] Error in GetStaticPriceTable: {ex.Message}", ex);
+                Console.WriteLine($"[QuickPrice] Error in GetStaticPriceTable: {ex.Message}");
                 var fallback = JsonSerializer.Serialize(new Dictionary<string, double>());
                 return new ValueTask<string>(fallback);
             }
@@ -269,26 +269,26 @@ namespace SwiftXP.SPT.ShowMeTheMoney.Server
                                     }
                                 }
 
-                                _loggerStatic?.Info($"[Show Me The Money] Dynamic price table generated with {priceTable.Count} items ({updatedCount} updated from flea market)", null);
+                                _loggerStatic?.Info($"[QuickPrice] Dynamic price table generated with {priceTable.Count} items ({updatedCount} updated from flea market)", null);
                             }
                             catch (Exception fleaEx)
                             {
-                                _loggerStatic?.Warning($"[Show Me The Money] Could not get flea market prices: {fleaEx.Message}", null);
+                                _loggerStatic?.Warning($"[QuickPrice] Could not get flea market prices: {fleaEx.Message}", null);
                             }
                         }
                         else
                         {
-                            _loggerStatic?.Info($"[Show Me The Money] Dynamic price table generated with {priceTable.Count} items (flea market data not available)", null);
+                            _loggerStatic?.Info($"[QuickPrice] Dynamic price table generated with {priceTable.Count} items (flea market data not available)", null);
                         }
                     }
                     catch (Exception dbEx)
                     {
-                        _loggerStatic?.Error($"[Show Me The Money] Error accessing database: {dbEx.Message}", dbEx);
+                        _loggerStatic?.Error($"[QuickPrice] Error accessing database: {dbEx.Message}", dbEx);
                     }
                 }
                 else
                 {
-                    _loggerStatic?.Warning("[Show Me The Money] DatabaseService is not available", null);
+                    _loggerStatic?.Warning("[QuickPrice] DatabaseService is not available", null);
                 }
 
                 var json = JsonSerializer.Serialize(priceTable);
@@ -296,8 +296,8 @@ namespace SwiftXP.SPT.ShowMeTheMoney.Server
             }
             catch (Exception ex)
             {
-                _loggerStatic?.Error($"[Show Me The Money] Error in GetDynamicPriceTable: {ex.Message}", ex);
-                Console.WriteLine($"[Show Me The Money] Error in GetDynamicPriceTable: {ex.Message}");
+                _loggerStatic?.Error($"[QuickPrice] Error in GetDynamicPriceTable: {ex.Message}", ex);
+                Console.WriteLine($"[QuickPrice] Error in GetDynamicPriceTable: {ex.Message}");
                 // 回退到静态价格表
                 return HandleGetStaticPriceTable(url, info, sessionId);
             }

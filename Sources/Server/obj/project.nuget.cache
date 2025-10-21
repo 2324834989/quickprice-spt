@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "TV7pliKpG+M=",
+  "dgSpecHash": "TYmnaP9esiY=",
   "success": true,
-  "projectFilePath": "D:\\C#\\spt-show-me-the-money-main\\ServerMod\\SwiftXP.SPT.ShowMeTheMoney.Server.csproj",
+  "projectFilePath": "D:\\C#\\QuickPrice\\Sources\\Server\\QuickPrice.Server.csproj",
   "expectedPackageFiles": [],
   "logs": []
 }

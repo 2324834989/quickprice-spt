@@ -1,9 +1,9 @@
 {
-    "name": "ShowMeTheMoney",
-    "version": "1.8.0",
-    "author": "SwiftXP",
+    "name": "QuickPrice",
+    "version": "1.0.0",
+    "author": "QuickPrice Team",
     "license": "MIT",
-    "sptVersion": "~3.11",
+    "sptVersion": "~4.0.0",
     "loadBefore": [],
     "loadAfter": [],
     "incompatibilities": [],
