@@ -1,6 +1,0 @@
-{
-    "Enabled": true,
-    "LogLevel": "Info",
-    "CacheTimeoutSeconds": 300,
-    "Notes": "Show Me The Money 服务端配置文件 - 当前版本暂不使用配置，预留用于将来扩展"
-}
