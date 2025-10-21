@@ -1,0 +1,29 @@
+{
+    "name": "ShowMeTheMoney",
+    "version": "1.8.0",
+    "author": "SwiftXP",
+    "license": "MIT",
+    "sptVersion": "~3.11",
+    "loadBefore": [],
+    "loadAfter": [],
+    "incompatibilities": [],
+    "isBundleMod": false,
+    "main": "src/mod.js",
+    "scripts": {
+        "setup": "npm i",
+        "build": "node ./build.mjs",
+        "buildinfo": "node ./build.mjs --verbose"
+    },
+    "devDependencies": {
+        "@types/node": "22.12.0",
+        "@typescript-eslint/eslint-plugin": "8.43.0",
+        "@typescript-eslint/parser": "8.43.0",
+        "archiver": "7.0.1",
+        "eslint": "9.35.0",
+        "fs-extra": "11.3.1",
+        "ignore": "7.0.5",
+        "tsyringe": "4.10.0",
+        "typescript": "5.9.2",
+        "winston": "3.17.0"
+    }
+}

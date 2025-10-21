@@ -1,0 +1,11 @@
+{
+  "name": "ShowMeTheMoney",
+  "version": "2.0.0",
+  "author": "SwiftXP",
+  "description": "SPT 4.0服务器模组，为客户端BepInEx插件提供价格数据",
+  "entryPoint": "swiftxp-showmethemoney.dll",
+  "entryClass": "SwiftXP.SPT.ShowMeTheMoney.Server.ShowMeTheMoneyServerMod",
+  "entryMethod": "Load",
+  "isServerMod": true,
+  "sptVersion": "4.0.0"
+}

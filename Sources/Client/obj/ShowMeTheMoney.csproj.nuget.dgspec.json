@@ -1,0 +1,57 @@
+{
+  "format": 1,
+  "restore": {
+    "D:\\C#\\ShowMeTheMoney-SPT4\\ShowMeTheMoney.csproj": {}
+  },
+  "projects": {
+    "D:\\C#\\ShowMeTheMoney-SPT4\\ShowMeTheMoney.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "D:\\C#\\ShowMeTheMoney-SPT4\\ShowMeTheMoney.csproj",
+        "projectName": "ShowMeTheMoney.Reborn",
+        "projectPath": "D:\\C#\\ShowMeTheMoney-SPT4\\ShowMeTheMoney.csproj",
+        "packagesPath": "C:\\Users\\Sayo\\.nuget\\packages\\",
+        "outputPath": "D:\\C#\\ShowMeTheMoney-SPT4\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\Sayo\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net471"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net471": {
+            "targetAlias": "net471",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.200"
+      },
+      "frameworks": {
+        "net471": {
+          "targetAlias": "net471",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.200\\RuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

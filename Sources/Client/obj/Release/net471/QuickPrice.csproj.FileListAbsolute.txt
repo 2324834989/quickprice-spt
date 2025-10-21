@@ -1,0 +1,2 @@
+D:\C#\QuickPrice\Sources\Client\obj\Release\net471\QuickPrice.csproj.AssemblyReference.cache
+D:\C#\QuickPrice\Sources\Client\obj\Release\net471\QuickPrice.GeneratedMSBuildEditorConfig.editorconfig

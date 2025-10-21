@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>SPTarkov.Common</name>
+    </assembly>
+    <members>
+        <member name="M:SPTarkov.Common.Extensions.ObjectExtensions.ContainsJsonProperty``1(System.Object,``0)">
+            <summary>
+                CARE WHEN USING THIS, THIS IS TO GET PROP ON A TYPE
+            </summary>
+            <param name="obj"></param>
+            <param name="key"></param>
+            <typeparam name="T"></typeparam>
+            <returns></returns>
+            <exception cref="T:System.ArgumentNullException"></exception>
+        </member>
+    </members>
+</doc>

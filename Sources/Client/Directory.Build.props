@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <TarkovDir>D:\Apps\TKFBao\TKFClient.0.16.9.0.40087\</TarkovDir>
+    <TarkovDebugDir>D:\Apps\TKFBao\TKFClient.0.16.9.0.40087\</TarkovDebugDir>
+  </PropertyGroup>
+</Project>

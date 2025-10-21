@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <RootNamespace>SwiftXP.SPT.ShowMeTheMoney.Server</RootNamespace>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <OutputType>Library</OutputType>
+        <Version>2.0.0</Version>
+        <AssemblyName>swiftxp-showmethemoney</AssemblyName>
+        <Title>Show Me The Money Server Mod</Title>
+        <Authors>SwiftXP</Authors>
+        <!-- 输出路径设置 -->
+        <OutputPath>bin\$(Configuration)\</OutputPath>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- 引用本地SPT DLL文件 -->
+        <Reference Include="SPT.Server">
+            <HintPath>..\..\..\..\Apps\TKFBao\TKFClient.0.16.9.0.40087\SPT\SPT.Server.dll</HintPath>
+        </Reference>
+        <Reference Include="SPTarkov.Server.Core">
+            <HintPath>..\..\..\..\Apps\TKFBao\TKFClient.0.16.9.0.40087\SPT\SPTarkov.Server.Core.dll</HintPath>
+        </Reference>
+        <Reference Include="SPTarkov.DI">
+            <HintPath>..\..\..\..\Apps\TKFBao\TKFClient.0.16.9.0.40087\SPT\SPTarkov.DI.dll</HintPath>
+        </Reference>
+        <Reference Include="SPTarkov.Common">
+            <HintPath>..\..\..\..\Apps\TKFBao\TKFClient.0.16.9.0.40087\SPT\SPTarkov.Common.dll</HintPath>
+        </Reference>
+        <Reference Include="SPTarkov.Reflection">
+            <HintPath>..\..\..\..\Apps\TKFBao\TKFClient.0.16.9.0.40087\SPT\SPTarkov.Reflection.dll</HintPath>
+        </Reference>
+        <Reference Include="SemanticVersioning">
+            <HintPath>..\..\..\..\Apps\TKFBao\TKFClient.0.16.9.0.40087\SPT\SemanticVersioning.dll</HintPath>
+        </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- 复制mod.json到输出目录 -->
+        <None Update="mod.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <!-- 复制配置文件到输出目录（如果需要） -->
+        <None Update="config.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+</Project>
