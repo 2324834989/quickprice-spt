@@ -107,4 +107,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[1.0.0]: https://github.com/quickprice/quickprice-spt/releases/tag/v1.0.0
+[1.0.0]: https://github.com/2324834989/quickprice-spt/releases/tag/v1.0.0

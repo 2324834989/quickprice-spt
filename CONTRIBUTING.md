@@ -35,7 +35,7 @@ Thank you for your interest in contributing to QuickPrice! This document provide
    ```
 3. **Add upstream remote**:
    ```bash
-   git remote add upstream https://github.com/quickprice/quickprice-spt.git
+   git remote add upstream https://github.com/2324834989/quickprice-spt.git
    ```
 
 ---
@@ -311,8 +311,8 @@ When suggesting features:
 
 ## ❓ Questions?
 
-- Open a [GitHub Discussion](https://github.com/quickprice/quickprice-spt/discussions)
-- Check existing [Issues](https://github.com/quickprice/quickprice-spt/issues)
+- Open a [GitHub Discussion](https://github.com/2324834989/quickprice-spt/discussions)
+- Check existing [Issues](https://github.com/2324834989/quickprice-spt/issues)
 - Review the [README](README.md)
 
 ---

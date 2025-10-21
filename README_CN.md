@@ -37,7 +37,7 @@
 
 ### 客户端安装（BepInEx 插件）
 
-1. 从 [Releases](https://github.com/quickprice/quickprice-spt/releases) 下载最新版本
+1. 从 [Releases](https://github.com/2324834989/quickprice-spt/releases) 下载最新版本
 2. 将 `QuickPrice.dll` 解压到：
    ```
    SPT安装目录/BepInEx/plugins/QuickPrice/
@@ -248,8 +248,8 @@ QuickPrice 包含智能性能优化：
 
 ## 📞 支持
 
-- **问题反馈**: [GitHub Issues](https://github.com/quickprice/quickprice-spt/issues)
-- **讨论交流**: [GitHub Discussions](https://github.com/quickprice/quickprice-spt/discussions)
+- **问题反馈**: [GitHub Issues](https://github.com/2324834989/quickprice-spt/issues)
+- **讨论交流**: [GitHub Discussions](https://github.com/2324834989/quickprice-spt/discussions)
 
 ---
 

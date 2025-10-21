@@ -37,7 +37,7 @@
 
 ### Client Installation (BepInEx Plugin)
 
-1. Download the latest release from [Releases](https://github.com/quickprice/quickprice-spt/releases)
+1. Download the latest release from [Releases](https://github.com/2324834989/quickprice-spt/releases)
 2. Extract `QuickPrice.dll` to:
    ```
    SPT_Install_Directory/BepInEx/plugins/QuickPrice/
@@ -224,8 +224,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/quickprice/quickprice-spt/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/quickprice/quickprice-spt/discussions)
+- **Issues**: [GitHub Issues](https://github.com/2324834989/quickprice-spt/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/2324834989/quickprice-spt/discussions)
 
 ---
 

@@ -48,7 +48,7 @@ namespace QuickPrice.Server
         /// <summary>
         /// Mod的URL
         /// </summary>
-        public override string? Url { get; init; } = "https://github.com/quickprice/quickprice-spt";
+        public override string? Url { get; init; } = "https://github.com/2324834989/quickprice-spt";
 
         /// <summary>
         /// Mod的许可证
