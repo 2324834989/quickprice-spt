@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("QuickPrice - Real-time item value display for Tarkov SPT")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8a48c933-dirty")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cb825ee1-dirty")]
 [assembly: System.Reflection.AssemblyProductAttribute("QuickPrice")]
 [assembly: System.Reflection.AssemblyTitleAttribute("QuickPrice")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

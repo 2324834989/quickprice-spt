@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("QuickPrice Team")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8a48c93365e60f679516fa0bb81b196e360772df")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cb825ee12874dfa9240a499778d885ccd0f61398")]
 [assembly: System.Reflection.AssemblyProductAttribute("quickprice")]
 [assembly: System.Reflection.AssemblyTitleAttribute("quickprice")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

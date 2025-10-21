@@ -1,5 +1,3 @@
-D:\C#\QuickPrice\Sources\Server\bin\Release\config.json
-D:\C#\QuickPrice\Sources\Server\bin\Release\mod.json
 D:\C#\QuickPrice\Sources\Server\bin\Release\quickprice.deps.json
 D:\C#\QuickPrice\Sources\Server\bin\Release\quickprice.dll
 D:\C#\QuickPrice\Sources\Server\bin\Release\quickprice.pdb
@@ -48,6 +46,7 @@ D:\C#\QuickPrice\Sources\Server\obj\Release\QuickPrice.Server.GeneratedMSBuildEd
 D:\C#\QuickPrice\Sources\Server\obj\Release\QuickPrice.Server.AssemblyInfoInputs.cache
 D:\C#\QuickPrice\Sources\Server\obj\Release\QuickPrice.Server.AssemblyInfo.cs
 D:\C#\QuickPrice\Sources\Server\obj\Release\QuickPrice.Server.csproj.CoreCompileInputs.cache
+D:\C#\QuickPrice\Sources\Server\obj\Release\QuickPrice.Server.sourcelink.json
 D:\C#\QuickPrice\Sources\Server\obj\Release\QuickPri.A0747EEC.Up2Date
 D:\C#\QuickPrice\Sources\Server\obj\Release\quickprice.dll
 D:\C#\QuickPrice\Sources\Server\obj\Release\refint\quickprice.dll

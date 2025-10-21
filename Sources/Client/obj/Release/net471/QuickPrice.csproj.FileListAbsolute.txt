@@ -141,3 +141,4 @@ D:\C#\QuickPrice\Sources\Client\obj\Release\net471\QuickPrice.csproj.CoreCompile
 D:\C#\QuickPrice\Sources\Client\obj\Release\net471\QuickPrice.csproj.Up2Date
 D:\C#\QuickPrice\Sources\Client\obj\Release\net471\QuickPrice.dll
 D:\C#\QuickPrice\Sources\Client\obj\Release\net471\QuickPrice.pdb
+D:\C#\QuickPrice\Sources\Client\obj\Release\net471\QuickPrice.sourcelink.json

@@ -38,7 +38,7 @@ namespace QuickPrice.Server
         /// <summary>
         /// 支持的SPT版本范围
         /// </summary>
-        public override SemanticVersioning.Range SptVersion { get; init; } = SemanticVersioning.Range.Parse("4.0.0");
+        public override SemanticVersioning.Range SptVersion { get; init; } = SemanticVersioning.Range.Parse("~4.0.0");
 
         /// <summary>
         /// 贡献者列表
