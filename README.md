@@ -28,6 +28,22 @@
 
 ---
 
+## 📸 Screenshots
+
+### Price Display & Tooltip
+![Price Display](Docs/Screenshots/price-display-tooltip.png)
+*Real-time price information displayed in item tooltips with color-coded value indicators*
+
+### Color-Coded Inventory
+![Color Coded Inventory](Docs/Screenshots/color-coded-inventory.png)
+*Large inventory view showing the six-tier color coding system across multiple items*
+
+### Inventory Overview
+![Inventory Overview](Docs/Screenshots/inventory-overview.png)
+*Mixed item types including weapons, ammo, and containers with price information*
+
+---
+
 ## 🚀 Installation
 
 ### Prerequisites

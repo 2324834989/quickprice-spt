@@ -28,6 +28,22 @@
 
 ---
 
+## 📸 功能截图
+
+### 价格显示与提示框
+![价格显示](Docs/Screenshots/price-display-tooltip.png)
+*物品提示框中实时显示价格信息，带有颜色编码的价值指示器*
+
+### 颜色编码物品栏
+![颜色编码物品栏](Docs/Screenshots/color-coded-inventory.png)
+*大型物品栏视图，展示六级颜色编码系统在多个物品上的应用*
+
+### 物品栏总览
+![物品栏总览](Docs/Screenshots/inventory-overview.png)
+*包含武器、弹药和容器等多种物品类型的价格信息展示*
+
+---
+
 ## 🚀 安装说明
 
 ### 前置要求
