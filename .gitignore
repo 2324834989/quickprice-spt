@@ -1,0 +1,141 @@
+# QuickPrice - Git Ignore File
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio cache/options
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.code-workspace
+
+# Build Results
+*.dll
+*.exe
+*.pdb
+*.cache
+*.log
+
+# Rider
+.idea/
+*.sln.iml
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Files built by Visual Studio
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.tlog
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# Visual C++ cache files
+ipch/
+*.aps
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
+
+# Visual Studio profiler
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# NuGet Packages
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Node.js (for server-side TypeScript build)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# OS Files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Release archives (keep only final releases in Releases/ folder)
+Sources/Client/release/*.zip
+Sources/Server/bin/Release/*.zip
+
+# Temporary files
+*.swp
+*.bak
+*.tmp
+*~
+
+# Auto-generated files
+Sources/Client/Version.cs
+*.AssemblyInfo.cs
+*.GlobalUsings.g.cs
+*.AssemblyAttributes.cs
+
+# Keep important configuration files
+!Sources/Client/VERSION.txt
+!Sources/Server/mod.json
+!Sources/Server/package.json
+!Sources/Server/config.json
