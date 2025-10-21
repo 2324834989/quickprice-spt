@@ -126,7 +126,7 @@ namespace QuickPrice.Config
             RequireCtrlKey = config.Bind(
                 "1. 主要设置",
                 "按住Ctrl键才显示",
-                true,
+                false,
                 "需要按住Ctrl键（左Ctrl或右Ctrl）才显示价格\n" +
                 "关闭此选项则鼠标悬停即显示价格"
             );
@@ -176,7 +176,7 @@ namespace QuickPrice.Config
             EnablePriceBasedBackgroundColor = config.Bind(
                 "2. 显示设置",
                 "自动着色物品背景",
-                false,
+                true,
                 "根据物品价格自动修改物品单元格背景颜色\n" +
                 "无需鼠标悬停，打开物品栏即可看到所有物品已着色\n" +
                 "使用与物品名称相同的价格阈值配置\n" +
