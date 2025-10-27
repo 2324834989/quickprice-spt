@@ -44,6 +44,9 @@
     <Reference Include="UnityEngine.InputLegacyModule">
       <HintPath>$(TarkovManagedDir)UnityEngine.InputLegacyModule.dll</HintPath>
     </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(TarkovManagedDir)Unity.TextMeshPro.dll</HintPath>
+    </Reference>
 
     <!-- BepInEx DLLs -->
     <Reference Include="0Harmony">

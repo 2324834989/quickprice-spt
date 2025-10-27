@@ -85,6 +85,17 @@ namespace QuickPrice.Services
                         }
 
                         Plugin.Log.LogInfo($"✅ 价格数据异步更新成功: {_priceCache.Count} 个物品");
+
+                        // 清理地面物品颜色缓存（价格已更新，颜色需要重新计算）
+                        try
+                        {
+                            Patches.LootItemLabelPatch.ClearColorCache();
+                        }
+                        catch (Exception)
+                        {
+                            // 忽略错误（补丁可能未启用）
+                        }
+
                         return true;
                     }
                     else

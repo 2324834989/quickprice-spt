@@ -274,6 +274,33 @@ namespace QuickPrice.Patches
                     return true; // 穿甲值为0，使用原始颜色
                 }
 
+                // 5.5 弹药包 - 按内部子弹的穿甲等级着色
+                if (__instance is AmmoBox ammoBox)
+                {
+                    // 尝试获取第一颗子弹的穿甲值
+                    if (Settings.UseCaliberPenetrationPower.Value && ammoBox.Cartridges?.Items != null)
+                    {
+                        var firstAmmo = ammoBox.Cartridges.Items.FirstOrDefault() as AmmoItemClass;
+                        if (firstAmmo != null && firstAmmo.PenetrationPower > 0)
+                        {
+                            __result = GetBackgroundColorByPenetration(firstAmmo.PenetrationPower);
+                            return false;
+                        }
+                    }
+
+                    // 如果无法获取子弹信息，按价格着色
+                    var ammoBoxPrice = PriceDataService.Instance.GetPrice(__instance.TemplateId);
+                    if (ammoBoxPrice.HasValue)
+                    {
+                        int slots = __instance.Width * __instance.Height;
+                        double pricePerSlot = slots > 0 ? ammoBoxPrice.Value / slots : ammoBoxPrice.Value;
+                        __result = GetBackgroundColorByPricePerSlot(pricePerSlot);
+                        return false;
+                    }
+
+                    return true; // 无价格数据，使用原始颜色
+                }
+
                 // 6. 配件 - 按单格价值着色
                 // 注意：弹匣已在上面被排除
                 if (__instance is Mod)

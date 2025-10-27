@@ -43,12 +43,16 @@ namespace QuickPrice
                 // v2.0: 启动异步商人数据检查（不阻塞游戏启动）
                 _ = InitializeTradersAsync();
 
+                // v2.0: 启动异步跳蚤禁售物品列表加载（不阻塞游戏启动）
+                _ = InitializeRagfairBannedItemsAsync();
+
                 // 注册所有补丁（立即启用）
                 EnableAllPatches();
 
                 Log.LogInfo("===========================================");
                 Log.LogInfo("  🎉 插件启动完成！");
                 Log.LogInfo("  ⏳ 价格数据正在后台加载...");
+                Log.LogInfo("  ⏳ 跳蚤禁售列表正在后台加载...");
                 Log.LogInfo("  🎮 进入游戏查看物品价格");
                 Log.LogInfo("  ⚙️  按 F12 打开配置管理器");
                 Log.LogInfo("===========================================");
@@ -199,6 +203,36 @@ namespace QuickPrice
         }
 
         /// <summary>
+        /// v2.0: 异步初始化跳蚤禁售物品列表
+        /// 在游戏启动时后台加载，不阻塞主线程
+        /// </summary>
+        private async Task InitializeRagfairBannedItemsAsync()
+        {
+            try
+            {
+                Log.LogInfo("🔄 开始异步加载跳蚤禁售物品列表...");
+
+                // 使用 PriceDataService 的异步方法
+                var success = await PriceDataService.Instance.UpdateRagfairBannedItemsAsync();
+
+                if (success)
+                {
+                    var status = PriceDataService.Instance.GetRagfairBannedCacheStatus();
+                    Log.LogInfo($"✅ 跳蚤禁售列表加载成功: {status}");
+                }
+                else
+                {
+                    Log.LogWarning("⚠️ 跳蚤禁售列表加载失败或为空，默认所有物品可售");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Log.LogError($"❌ 加载跳蚤禁售列表失败: {ex.Message}");
+                Log.LogWarning("   所有物品将默认显示跳蚤价格");
+            }
+        }
+
+        /// <summary>
         /// 启用所有补丁
         /// </summary>
         private void EnableAllPatches()
@@ -238,6 +272,17 @@ namespace QuickPrice
                 else
                 {
                     Log.LogInfo("ℹ️  打开物品栏自动刷新已禁用（可在配置中启用）");
+                }
+
+                // 注册地面物品名称着色补丁（如果启用物品名称着色）
+                if (Settings.ColorItemName.Value && Settings.EnableColorCoding.Value)
+                {
+                    new LootItemLabelPatch().Enable();
+                    Log.LogInfo("✅ 地面物品名称着色补丁已启用");
+                }
+                else
+                {
+                    Log.LogInfo("ℹ️  地面物品名称着色已禁用（可在配置中启用）");
                 }
             }
             catch (System.Exception ex)

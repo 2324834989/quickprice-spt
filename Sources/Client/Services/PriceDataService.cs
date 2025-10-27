@@ -21,6 +21,11 @@ namespace QuickPrice.Services
         private readonly object _lockObject = new object(); // 新增：线程安全锁
         private Task<bool> _updateTask; // 新增：异步任务追踪
 
+        // 跳蚤市场禁售物品列表缓存
+        private HashSet<string> _ragfairBannedItems;
+        private DateTime _bannedItemsLastUpdate = DateTime.MinValue;
+        private Task<bool> _bannedItemsUpdateTask; // 禁售物品异步任务追踪
+
         private PriceDataService() { }
 
         /// <summary>
@@ -241,6 +246,124 @@ namespace QuickPrice.Services
         public bool IsCacheExpired()
         {
             return ShouldRefresh();
+        }
+
+        // ========== 跳蚤市场禁售物品功能 ==========
+
+        /// <summary>
+        /// 异步获取跳蚤市场禁售物品列表
+        /// 不阻塞主线程，仅在后台获取一次
+        /// </summary>
+        public async Task<bool> UpdateRagfairBannedItemsAsync()
+        {
+            // 如果已有缓存且最近24小时内更新过，直接返回
+            if (_ragfairBannedItems != null &&
+                (DateTime.Now - _bannedItemsLastUpdate).TotalHours < 24)
+            {
+                return true;
+            }
+
+            // 如果已有更新任务在运行，等待其完成
+            if (_bannedItemsUpdateTask != null && !_bannedItemsUpdateTask.IsCompleted)
+            {
+                await _bannedItemsUpdateTask;
+                return _ragfairBannedItems != null;
+            }
+
+            // 创建新的异步更新任务
+            _bannedItemsUpdateTask = Task.Run(() =>
+            {
+                try
+                {
+                    Plugin.Log.LogInfo("[跳蚤禁售] 开始异步获取禁售物品列表...");
+
+                    string json = RequestHandler.GetJson("/showMeTheMoney/getRagfairBannedItems");
+
+                    if (!string.IsNullOrEmpty(json))
+                    {
+                        var bannedList = JsonConvert.DeserializeObject<List<string>>(json);
+
+                        // 使用锁保护缓存更新
+                        lock (_lockObject)
+                        {
+                            _ragfairBannedItems = new HashSet<string>(bannedList);
+                            _bannedItemsLastUpdate = DateTime.Now;
+                        }
+
+                        Plugin.Log.LogInfo($"[跳蚤禁售] 成功获取 {_ragfairBannedItems.Count} 个禁售物品");
+                        return true;
+                    }
+                    else
+                    {
+                        Plugin.Log.LogWarning("[跳蚤禁售] 服务端返回空数据，默认所有物品可售");
+                        lock (_lockObject)
+                        {
+                            _ragfairBannedItems = new HashSet<string>();
+                            _bannedItemsLastUpdate = DateTime.Now;
+                        }
+                        return false;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Log.LogError($"[跳蚤禁售] 获取禁售物品列表失败: {ex.Message}");
+                    // 失败时创建空集合，避免重复请求
+                    lock (_lockObject)
+                    {
+                        _ragfairBannedItems = new HashSet<string>();
+                        _bannedItemsLastUpdate = DateTime.Now;
+                    }
+                    return false;
+                }
+            });
+
+            return await _bannedItemsUpdateTask;
+        }
+
+        /// <summary>
+        /// 检查物品是否在跳蚤市场禁售（线程安全）
+        /// </summary>
+        /// <param name="templateId">物品模板ID</param>
+        /// <returns>true = 可售, false = 禁售, null = 数据未加载</returns>
+        public bool? IsRagfairBanned(string templateId)
+        {
+            if (string.IsNullOrEmpty(templateId))
+                return null;
+
+            lock (_lockObject)
+            {
+                // 如果数据还未加载，返回 null
+                if (_ragfairBannedItems == null)
+                    return null;
+
+                // 检查是否在禁售列表中
+                return _ragfairBannedItems.Contains(templateId);
+            }
+        }
+
+        /// <summary>
+        /// 启动异步加载禁售物品列表（非阻塞）
+        /// 仅在后台启动任务，不等待完成
+        /// </summary>
+        public void StartLoadRagfairBannedItems()
+        {
+            // 使用 Fire-and-Forget 方式启动异步任务
+            _ = UpdateRagfairBannedItemsAsync();
+        }
+
+        /// <summary>
+        /// 获取禁售物品缓存状态
+        /// </summary>
+        public string GetRagfairBannedCacheStatus()
+        {
+            lock (_lockObject)
+            {
+                if (_ragfairBannedItems == null)
+                    return "禁售列表: 未加载";
+
+                var age = (DateTime.Now - _bannedItemsLastUpdate).TotalHours;
+                return $"禁售列表: {_ragfairBannedItems.Count} 项, 年龄: {age:F1}小时";
+            }
         }
     }
 }

@@ -71,6 +71,13 @@ namespace QuickPrice.Server
                     "/showMeTheMoney/getDynamicPriceTable",
                     async (url, info, sessionId, output) =>
                         await HandleGetDynamicPriceTable(url, info, sessionId)
+                ),
+
+                // 路由4: 获取跳蚤市场禁售物品列表
+                new RouteAction<EmptyRequestData>(
+                    "/showMeTheMoney/getRagfairBannedItems",
+                    async (url, info, sessionId, output) =>
+                        await HandleGetRagfairBannedItems(url, info, sessionId)
                 )
             ];
         }
@@ -300,6 +307,103 @@ namespace QuickPrice.Server
                 Console.WriteLine($"[QuickPrice] Error in GetDynamicPriceTable: {ex.Message}");
                 // 回退到静态价格表
                 return HandleGetStaticPriceTable(url, info, sessionId);
+            }
+        }
+
+        /// <summary>
+        /// 处理获取跳蚤市场禁售物品列表的请求
+        /// </summary>
+        private static ValueTask<string> HandleGetRagfairBannedItems(
+            string url,
+            EmptyRequestData info,
+            MongoId sessionId)
+        {
+            try
+            {
+                var bannedItems = new HashSet<string>();
+
+                if (_databaseServiceStatic != null)
+                {
+                    try
+                    {
+                        var tables = _databaseServiceStatic.GetTables();
+
+                        // 遍历所有物品模板，检查跳蚤市场相关属性
+                        if (tables?.Templates?.Items != null)
+                        {
+                            foreach (var itemEntry in tables.Templates.Items)
+                            {
+                                try
+                                {
+                                    string itemId = itemEntry.Key;
+                                    var item = itemEntry.Value;
+
+                                    // 使用反射检查物品是否可以在跳蚤市场出售
+                                    // SPT 4.0.0 中物品模板可能有多种结构，需要动态检查
+                                    var itemType = item.GetType();
+
+                                    // 尝试获取 CanSellOnRagfair 属性
+                                    var canSellProp = itemType.GetProperty("CanSellOnRagfair");
+                                    var canRequireProp = itemType.GetProperty("CanRequireOnRagfair");
+
+                                    bool? canSell = null;
+                                    bool? canRequire = null;
+
+                                    if (canSellProp != null)
+                                    {
+                                        var value = canSellProp.GetValue(item);
+                                        if (value is bool b)
+                                            canSell = b;
+                                    }
+
+                                    if (canRequireProp != null)
+                                    {
+                                        var value = canRequireProp.GetValue(item);
+                                        if (value is bool b)
+                                            canRequire = b;
+                                    }
+
+                                    // 如果任一属性明确禁止，则加入禁售列表
+                                    if (canSell == false || canRequire == false)
+                                    {
+                                        bannedItems.Add(itemId);
+                                    }
+                                }
+                                catch
+                                {
+                                    // 某个物品检查失败，跳过继续处理其他物品
+                                    continue;
+                                }
+                            }
+
+                            _loggerStatic?.Info($"[QuickPrice] Found {bannedItems.Count} ragfair-banned items", null);
+                        }
+                        else
+                        {
+                            _loggerStatic?.Warning("[QuickPrice] Templates.Items is null", null);
+                        }
+                    }
+                    catch (Exception dbEx)
+                    {
+                        _loggerStatic?.Error($"[QuickPrice] Error accessing database for banned items: {dbEx.Message}", dbEx);
+                    }
+                }
+                else
+                {
+                    _loggerStatic?.Warning("[QuickPrice] DatabaseService is not available for banned items check", null);
+                }
+
+                // 返回禁售物品ID列表
+                var json = JsonSerializer.Serialize(bannedItems.ToList());
+                return new ValueTask<string>(json);
+            }
+            catch (Exception ex)
+            {
+                _loggerStatic?.Error($"[QuickPrice] Error in GetRagfairBannedItems: {ex.Message}", ex);
+                Console.WriteLine($"[QuickPrice] Error in GetRagfairBannedItems: {ex.Message}");
+                // 返回空列表
+                var fallback = JsonSerializer.Serialize(new List<string>());
+                return new ValueTask<string>(fallback);
             }
         }
 

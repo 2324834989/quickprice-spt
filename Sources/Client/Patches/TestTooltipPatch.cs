@@ -1,3 +1,4 @@
+using System;
 using System.Reflection;
 using System.Text;
 using System.Linq;
@@ -11,6 +12,15 @@ using QuickPrice.Utils;
 
 namespace QuickPrice.Patches
 {
+    /// <summary>
+    /// 物品计数器 - 用于追踪容器计算中的物品数量
+    /// </summary>
+    internal class ItemCounter
+    {
+        public int Count { get; set; } = 0;
+        public bool WasLimited { get; set; } = false;
+    }
+
     /// <summary>
     /// 价格显示补丁 - 拦截 SimpleTooltip.Show() 方法
     /// 在物品 tooltip 后面添加价格信息
@@ -79,8 +89,11 @@ namespace QuickPrice.Patches
                 // 弹药盒
                 else if (item is AmmoBox ammoBox)
                 {
+                    // 打印详细的 AmmoBox 信息
+                    LogAmmoBoxDetails(ammoBox);
+
                     // Plugin.Log.LogInfo($"   ✅ 识别为弹药盒");
-                    text += FormatNormalItemPriceText(ammoBox, slots);
+                    text += FormatAmmoBoxPriceText(ammoBox, slots);
                 }
                 // 护甲（在子弹之前检查，避免被其他分类覆盖）
                 else if (ArmorHelper.IsArmor(item))
@@ -122,6 +135,9 @@ namespace QuickPrice.Patches
                     // Plugin.Log.LogInfo($"   ✅ 识别为普通物品");
                     text += FormatNormalItemPriceText(item, slots);
                 }
+
+                // 添加跳蚤市场禁售标签（统一处理所有类型）
+                text += RagfairHelper.GetRagfairBanLabel(item);
 
                 // 设置延迟
                 delay = Settings.TooltipDelay.Value;
@@ -203,7 +219,7 @@ namespace QuickPrice.Patches
                 }
                 else if (item is AmmoBox ammoBox)
                 {
-                    // 弹药盒：按平均穿甲等级着色（如果启用）
+                    // 弹药盒：按加权平均穿甲等级着色（如果启用）
                     if (Settings.UseCaliberPenetrationPower.Value && ammoBox.Cartridges?.Items != null)
                     {
                         int totalPenetration = 0;
@@ -213,8 +229,9 @@ namespace QuickPrice.Patches
                         {
                             if (cartridge is AmmoItemClass ammoItem && ammoItem.PenetrationPower > 0)
                             {
-                                totalPenetration += ammoItem.PenetrationPower;
-                                penetrationCount++;
+                                int stackCount = ammoItem.StackObjectsCount;
+                                totalPenetration += ammoItem.PenetrationPower * stackCount;  // ✅ 加权平均
+                                penetrationCount += stackCount;  // ✅ 累加堆叠数量
                             }
                         }
 
@@ -385,17 +402,23 @@ namespace QuickPrice.Patches
             // 计算单格价值（用于颜色编码）
             double pricePerSlotForColor = slots > 0 ? totalPrice / slots : totalPrice;
 
-            // 显示总价
-            string totalPriceText = $"跳蚤市场: {TextFormatting.FormatPrice(totalPrice)}";
-            if (Settings.EnableColorCoding.Value)
+            // 检查是否可以在跳蚤市场出售
+            bool showRagfairPrice = RagfairHelper.ShouldShowRagfairPrice(weapon);
+
+            // 显示总价（仅当不禁售时）
+            if (showRagfairPrice)
             {
-                totalPriceText = PriceColorCoding.ApplyColor(totalPriceText, pricePerSlotForColor);
+                string totalPriceText = $"跳蚤市场: {TextFormatting.FormatPrice(totalPrice)}";
+                if (Settings.EnableColorCoding.Value)
+                {
+                    totalPriceText = PriceColorCoding.ApplyColor(totalPriceText, pricePerSlotForColor);
+                }
+                if (Settings.ShowBestPriceInBold.Value)
+                {
+                    totalPriceText = TextFormatting.Bold(totalPriceText);
+                }
+                sb.Append($"\n{totalPriceText}");
             }
-            if (Settings.ShowBestPriceInBold.Value)
-            {
-                totalPriceText = TextFormatting.Bold(totalPriceText);
-            }
-            sb.Append($"\n{totalPriceText}");
 
             // 显示商人回收价格（单独一行）
             AppendTraderPriceIfEnabled(sb, weapon);
@@ -501,6 +524,109 @@ namespace QuickPrice.Patches
         }
 
         /// <summary>
+        /// 打印 AmmoBox 详细信息（用于调试）
+        /// </summary>
+        private static void LogAmmoBoxDetails(AmmoBox ammoBox)
+        {
+            try
+            {
+                Plugin.Log.LogWarning("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                Plugin.Log.LogWarning($"🔍 [弹药包详细信息]");
+                Plugin.Log.LogWarning($"   名称: {ammoBox.LocalizedName()}");
+                Plugin.Log.LogWarning($"   TemplateId: {ammoBox.TemplateId}");
+
+                // 打印类型信息
+                var itemType = ammoBox.GetType();
+                Plugin.Log.LogWarning($"   类型: {itemType.FullName}");
+                Plugin.Log.LogWarning($"   简单类型名: {itemType.Name}");
+
+                // 打印继承链
+                Plugin.Log.LogWarning($"   继承链:");
+                var baseType = itemType.BaseType;
+                int depth = 1;
+                while (baseType != null && depth < 5)
+                {
+                    Plugin.Log.LogWarning($"     {new string(' ', depth * 2)}↑ {baseType.Name}");
+                    baseType = baseType.BaseType;
+                    depth++;
+                }
+
+                // 检查 Cartridges
+                Plugin.Log.LogWarning($"   Cartridges 是否为 null: {ammoBox.Cartridges == null}");
+
+                if (ammoBox.Cartridges != null)
+                {
+                    Plugin.Log.LogWarning($"   Cartridges.Items 是否为 null: {ammoBox.Cartridges.Items == null}");
+
+                    if (ammoBox.Cartridges.Items != null)
+                    {
+                        var cartridges = ammoBox.Cartridges.Items.ToList();
+                        Plugin.Log.LogWarning($"   子弹数量: {cartridges.Count}");
+
+                        if (cartridges.Count > 0)
+                        {
+                            var firstCartridge = cartridges[0];
+                            Plugin.Log.LogWarning($"   第一颗子弹类型: {firstCartridge?.GetType().Name}");
+
+                            if (firstCartridge is AmmoItemClass firstAmmo)
+                            {
+                                Plugin.Log.LogWarning($"   第一颗子弹信息:");
+                                Plugin.Log.LogWarning($"      名称: {firstAmmo.LocalizedName()}");
+                                Plugin.Log.LogWarning($"      TemplateId: {firstAmmo.TemplateId}");
+                                Plugin.Log.LogWarning($"      穿甲值: {firstAmmo.PenetrationPower}");
+                                Plugin.Log.LogWarning($"      口径: {firstAmmo.Caliber}");
+                                Plugin.Log.LogWarning($"      伤害: {firstAmmo.Damage}");
+                                Plugin.Log.LogWarning($"      速度: {firstAmmo.InitialSpeed}");
+                            }
+                        }
+                    }
+                }
+
+                // 打印所有公共属性
+                Plugin.Log.LogWarning($"   公共属性 (前30个):");
+                var properties = itemType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+                foreach (var prop in properties.Take(30))
+                {
+                    try
+                    {
+                        var value = prop.GetValue(ammoBox);
+                        string valueStr = value?.ToString() ?? "null";
+                        if (valueStr.Length > 60) valueStr = valueStr.Substring(0, 60) + "...";
+                        Plugin.Log.LogWarning($"      {prop.Name} ({prop.PropertyType.Name}): {valueStr}");
+                    }
+                    catch
+                    {
+                        Plugin.Log.LogWarning($"      {prop.Name} ({prop.PropertyType.Name}): [无法获取]");
+                    }
+                }
+
+                // 打印所有公共字段
+                Plugin.Log.LogWarning($"   公共字段 (前30个):");
+                var fields = itemType.GetFields(BindingFlags.Public | BindingFlags.Instance);
+                foreach (var field in fields.Take(30))
+                {
+                    try
+                    {
+                        var value = field.GetValue(ammoBox);
+                        string valueStr = value?.ToString() ?? "null";
+                        if (valueStr.Length > 60) valueStr = valueStr.Substring(0, 60) + "...";
+                        Plugin.Log.LogWarning($"      {field.Name} ({field.FieldType.Name}): {valueStr}");
+                    }
+                    catch
+                    {
+                        Plugin.Log.LogWarning($"      {field.Name} ({field.FieldType.Name}): [无法获取]");
+                    }
+                }
+
+                Plugin.Log.LogWarning("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogError($"❌ 打印 AmmoBox 详细信息失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// 格式化普通物品价格文本
         /// </summary>
         private static string FormatNormalItemPriceText(Item item, int slots)
@@ -516,17 +642,23 @@ namespace QuickPrice.Patches
             // 计算单格价值（用于颜色编码）
             double pricePerSlotForColor = slots > 0 ? price.Value / slots : price.Value;
 
-            // 显示跳蚤市场价格
-            string priceText = $"跳蚤市场: {TextFormatting.FormatPrice(price.Value)}";
-            if (Settings.EnableColorCoding.Value)
+            // 检查是否可以在跳蚤市场出售
+            bool showRagfairPrice = RagfairHelper.ShouldShowRagfairPrice(item);
+
+            // 显示跳蚤市场价格（仅当不禁售时）
+            if (showRagfairPrice)
             {
-                priceText = PriceColorCoding.ApplyColor(priceText, pricePerSlotForColor);
+                string priceText = $"跳蚤市场: {TextFormatting.FormatPrice(price.Value)}";
+                if (Settings.EnableColorCoding.Value)
+                {
+                    priceText = PriceColorCoding.ApplyColor(priceText, pricePerSlotForColor);
+                }
+                if (Settings.ShowBestPriceInBold.Value)
+                {
+                    priceText = TextFormatting.Bold(priceText);
+                }
+                sb.Append($"\n{priceText}");
             }
-            if (Settings.ShowBestPriceInBold.Value)
-            {
-                priceText = TextFormatting.Bold(priceText);
-            }
-            sb.Append($"\n{priceText}");
 
             // 显示商人回收价格（单独一行）
             AppendTraderPriceIfEnabled(sb, item);
@@ -562,23 +694,29 @@ namespace QuickPrice.Patches
             // 计算单格价值（用于颜色编码）
             double pricePerSlotForColor = slots > 0 ? totalPrice / slots : totalPrice;
 
-            // 显示堆叠总价
-            string totalPriceText = $"跳蚤市场: {TextFormatting.FormatPrice(totalPrice)} (x{stackCount})";
-            if (Settings.EnableColorCoding.Value)
+            // 检查是否可以在跳蚤市场出售
+            bool showRagfairPrice = RagfairHelper.ShouldShowRagfairPrice(item);
+
+            // 显示堆叠总价（仅当不禁售时）
+            if (showRagfairPrice)
             {
-                totalPriceText = PriceColorCoding.ApplyColor(totalPriceText, pricePerSlotForColor);
+                string totalPriceText = $"跳蚤市场: {TextFormatting.FormatPrice(totalPrice)} (x{stackCount})";
+                if (Settings.EnableColorCoding.Value)
+                {
+                    totalPriceText = PriceColorCoding.ApplyColor(totalPriceText, pricePerSlotForColor);
+                }
+                if (Settings.ShowBestPriceInBold.Value)
+                {
+                    totalPriceText = TextFormatting.Bold(totalPriceText);
+                }
+                sb.Append($"\n{totalPriceText}");
+
+                // 显示单价
+                sb.Append($"\n单价: {TextFormatting.FormatPrice(unitPrice.Value)}");
             }
-            if (Settings.ShowBestPriceInBold.Value)
-            {
-                totalPriceText = TextFormatting.Bold(totalPriceText);
-            }
-            sb.Append($"\n{totalPriceText}");
 
             // 显示商人回收价格（单独一行）
             AppendTraderPriceIfEnabled(sb, item);
-
-            // 显示单价
-            sb.Append($"\n单价: {TextFormatting.FormatPrice(unitPrice.Value)}");
 
             // 如果多格，显示单格价值
             if (Settings.ShowPricePerSlot.Value && slots > 1)
@@ -618,8 +756,9 @@ namespace QuickPrice.Patches
 
             // 计算子弹总价
             double ammosPrice = 0;
-            int ammoCount = 0;
+            int ammoCount = ammoBox.Count;  // ✅ 使用 AmmoBox.Count 获取实际子弹数量
             int? avgPenetration = null;
+            AmmoItemClass firstAmmo = null;  // 保存第一颗子弹的引用，用于显示详细信息
 
             if (ammoBox.Cartridges?.Items != null)
             {
@@ -632,26 +771,33 @@ namespace QuickPrice.Patches
 
                     if (cartridge is AmmoItemClass ammoItem)
                     {
-                        ammoCount++;
-                        // Plugin.Log.LogDebug($"    - 子弹 #{ammoCount}: {ammoItem.LocalizedName()}");
+                        // 保存第一颗子弹
+                        if (firstAmmo == null)
+                        {
+                            firstAmmo = ammoItem;
+                        }
+
+                        // 获取当前堆叠的子弹数量
+                        int stackCount = ammoItem.StackObjectsCount;
+                        // Plugin.Log.LogDebug($"    - 子弹: {ammoItem.LocalizedName()} x{stackCount}");
 
                         var ammoPrice = PriceDataService.Instance.GetPrice(ammoItem.TemplateId);
                         if (ammoPrice.HasValue)
                         {
-                            ammosPrice += ammoPrice.Value;
-                            // Plugin.Log.LogDebug($"      价格: {ammoPrice.Value:N0}₽");
+                            ammosPrice += ammoPrice.Value * stackCount;  // ✅ 价格 × 堆叠数量
+                            // Plugin.Log.LogDebug($"      价格: {ammoPrice.Value:N0}₽ x{stackCount} = {ammoPrice.Value * stackCount:N0}₽");
                         }
                         else
                         {
                             Plugin.Log.LogWarning($"      ⚠️ 子弹 {ammoItem.LocalizedName()} 没有价格数据");
                         }
 
-                        // 计算平均穿甲值
+                        // 计算加权平均穿甲值
                         if (ammoItem.PenetrationPower > 0)
                         {
-                            totalPenetration += ammoItem.PenetrationPower;
-                            penetrationCount++;
-                            // Plugin.Log.LogDebug($"      穿甲: {ammoItem.PenetrationPower}");
+                            totalPenetration += ammoItem.PenetrationPower * stackCount;  // ✅ 穿甲值 × 堆叠数量
+                            penetrationCount += stackCount;  // ✅ 累加堆叠数量
+                            // Plugin.Log.LogDebug($"      穿甲: {ammoItem.PenetrationPower} x{stackCount}");
                         }
                     }
                 }
@@ -665,7 +811,7 @@ namespace QuickPrice.Patches
             }
             else
             {
-                Plugin.Log.LogWarning($"⚠️ 弹匣 {ammoBox.LocalizedName()} 的 Cartridges.Items 为 null 或空");
+                Plugin.Log.LogWarning($"⚠️ 弹药包 {ammoBox.LocalizedName()} 的 Cartridges.Items 为 null 或空");
             }
 
             // 总价 = 弹匣 + 子弹
@@ -674,29 +820,74 @@ namespace QuickPrice.Patches
             // 计算单格价值（用于颜色编码）
             double pricePerSlotForColor = slots > 0 ? totalPrice / slots : totalPrice;
 
-            // 显示总价（按穿甲等级着色）
-            string totalPriceText = $"跳蚤市场: {TextFormatting.FormatPrice(totalPrice)}";
-            if (avgPenetration.HasValue && Settings.UseCaliberPenetrationPower.Value)
-            {
-                totalPriceText = AmmoColorCoding.ApplyPenetrationColor(totalPriceText, avgPenetration.Value);
-            }
-            else if (Settings.EnableColorCoding.Value)
-            {
-                totalPriceText = PriceColorCoding.ApplyColor(totalPriceText, pricePerSlotForColor);
-            }
-            if (Settings.ShowBestPriceInBold.Value)
-            {
-                totalPriceText = TextFormatting.Bold(totalPriceText);
-            }
-            sb.Append($"\n{totalPriceText}");
+            // 检查是否可以在跳蚤市场出售
+            bool showRagfairPrice = RagfairHelper.ShouldShowRagfairPrice(ammoBox);
 
-            // 显示弹匣价值
-            sb.Append($"\n弹匣价值: {TextFormatting.FormatPrice(boxPrice.Value)}");
+            // 显示总价（仅当不禁售时）
+            if (showRagfairPrice)
+            {
+                string totalPriceText = $"跳蚤市场: {TextFormatting.FormatPrice(totalPrice)}";
+                if (avgPenetration.HasValue && Settings.UseCaliberPenetrationPower.Value)
+                {
+                    totalPriceText = AmmoColorCoding.ApplyPenetrationColor(totalPriceText, avgPenetration.Value);
+                }
+                else if (Settings.EnableColorCoding.Value)
+                {
+                    totalPriceText = PriceColorCoding.ApplyColor(totalPriceText, pricePerSlotForColor);
+                }
+                if (Settings.ShowBestPriceInBold.Value)
+                {
+                    totalPriceText = TextFormatting.Bold(totalPriceText);
+                }
+                sb.Append($"\n{totalPriceText}");
+            }
 
-            // 显示子弹价值（含数量）
+            // 显示商人回收价格（单独一行）
+            AppendTraderPriceIfEnabled(sb, ammoBox);
+
+            // 显示弹药包/弹匣价值
+            sb.Append($"\n弹药包价值: {TextFormatting.FormatPrice(boxPrice.Value)}");
+
+            // 显示子弹详细信息
             if (ammoCount > 0)
             {
                 sb.Append($"\n子弹价值: {TextFormatting.FormatPrice(ammosPrice)} (x{ammoCount})");
+
+                // 如果有子弹信息，显示详细信息
+                if (firstAmmo != null)
+                {
+                    sb.Append($"\n子弹型号: {firstAmmo.LocalizedName()}");
+
+                    // 穿甲等级（着色）
+                    if (firstAmmo.PenetrationPower > 0)
+                    {
+                        string penetrationText = $"穿甲等级: {firstAmmo.PenetrationPower}";
+                        if (Settings.EnableColorCoding.Value && Settings.UseCaliberPenetrationPower.Value)
+                        {
+                            penetrationText = AmmoColorCoding.ApplyPenetrationColor(penetrationText, firstAmmo.PenetrationPower);
+                        }
+                        sb.Append($"\n{penetrationText}");
+                    }
+
+                    // 口径
+                    if (!string.IsNullOrEmpty(firstAmmo.Caliber))
+                    {
+                        sb.Append($"\n口径: {firstAmmo.Caliber}");
+                    }
+
+                    // 伤害
+                    if (firstAmmo.Damage > 0)
+                    {
+                        sb.Append($"\n伤害: {firstAmmo.Damage}");
+                    }
+
+                    // 单发价格
+                    if (ammoCount > 0)
+                    {
+                        double pricePerRound = (boxPrice.Value + ammosPrice) / ammoCount;
+                        sb.Append($"\n单发价格: {TextFormatting.FormatPrice(pricePerRound)}");
+                    }
+                }
             }
 
             // 显示单格价值
@@ -834,21 +1025,27 @@ namespace QuickPrice.Patches
             // 计算单格价值（用于颜色编码）
             double pricePerSlotForColor = slots > 0 ? totalPrice / slots : totalPrice;
 
-            // 显示总价（按穿甲等级着色）
-            string totalPriceText = $"跳蚤市场: {TextFormatting.FormatPrice(totalPrice)}";
-            if (avgPenetration.HasValue && Settings.UseCaliberPenetrationPower.Value)
+            // 检查是否可以在跳蚤市场出售
+            bool showRagfairPrice = RagfairHelper.ShouldShowRagfairPrice(magazine);
+
+            // 显示总价（仅当不禁售时）
+            if (showRagfairPrice)
             {
-                totalPriceText = AmmoColorCoding.ApplyPenetrationColor(totalPriceText, avgPenetration.Value);
+                string totalPriceText = $"跳蚤市场: {TextFormatting.FormatPrice(totalPrice)}";
+                if (avgPenetration.HasValue && Settings.UseCaliberPenetrationPower.Value)
+                {
+                    totalPriceText = AmmoColorCoding.ApplyPenetrationColor(totalPriceText, avgPenetration.Value);
+                }
+                else if (Settings.EnableColorCoding.Value)
+                {
+                    totalPriceText = PriceColorCoding.ApplyColor(totalPriceText, pricePerSlotForColor);
+                }
+                if (Settings.ShowBestPriceInBold.Value)
+                {
+                    totalPriceText = TextFormatting.Bold(totalPriceText);
+                }
+                sb.Append($"\n{totalPriceText}");
             }
-            else if (Settings.EnableColorCoding.Value)
-            {
-                totalPriceText = PriceColorCoding.ApplyColor(totalPriceText, pricePerSlotForColor);
-            }
-            if (Settings.ShowBestPriceInBold.Value)
-            {
-                totalPriceText = TextFormatting.Bold(totalPriceText);
-            }
-            sb.Append($"\n{totalPriceText}");
 
             // 显示商人回收价格（单独一行）
             AppendTraderPriceIfEnabled(sb, magazine);
@@ -912,27 +1109,33 @@ namespace QuickPrice.Patches
             // 计算单格价值（用于颜色编码）
             double pricePerSlotForColor = slots > 0 ? totalPrice / slots : totalPrice;
 
-            // 显示价格（按穿甲等级着色）
-            string priceText = $"跳蚤市场: {TextFormatting.FormatPrice(totalPrice)}";
-            if (stackCount > 1)
-            {
-                priceText += $" (x{stackCount})";
-            }
+            // 检查是否可以在跳蚤市场出售
+            bool showRagfairPrice = RagfairHelper.ShouldShowRagfairPrice(ammoItem);
 
-            if (ammoItem.PenetrationPower > 0 && Settings.UseCaliberPenetrationPower.Value)
+            // 显示价格（仅当不禁售时）
+            if (showRagfairPrice)
             {
-                priceText = AmmoColorCoding.ApplyPenetrationColor(priceText, ammoItem.PenetrationPower);
-            }
-            else if (Settings.EnableColorCoding.Value)
-            {
-                priceText = PriceColorCoding.ApplyColor(priceText, pricePerSlotForColor);
-            }
+                string priceText = $"跳蚤市场: {TextFormatting.FormatPrice(totalPrice)}";
+                if (stackCount > 1)
+                {
+                    priceText += $" (x{stackCount})";
+                }
 
-            if (Settings.ShowBestPriceInBold.Value)
-            {
-                priceText = TextFormatting.Bold(priceText);
+                if (ammoItem.PenetrationPower > 0 && Settings.UseCaliberPenetrationPower.Value)
+                {
+                    priceText = AmmoColorCoding.ApplyPenetrationColor(priceText, ammoItem.PenetrationPower);
+                }
+                else if (Settings.EnableColorCoding.Value)
+                {
+                    priceText = PriceColorCoding.ApplyColor(priceText, pricePerSlotForColor);
+                }
+
+                if (Settings.ShowBestPriceInBold.Value)
+                {
+                    priceText = TextFormatting.Bold(priceText);
+                }
+                sb.Append($"\n{priceText}");
             }
-            sb.Append($"\n{priceText}");
 
             // 显示商人回收价格（单独一行）
             AppendTraderPriceIfEnabled(sb, ammoItem);
@@ -970,17 +1173,23 @@ namespace QuickPrice.Patches
             // 计算单格价值（用于颜色编码）
             double pricePerSlotForColor = slots > 0 ? armorPrice.Value / slots : armorPrice.Value;
 
-            // 显示跳蚤市场价格
-            string priceText = $"跳蚤市场: {TextFormatting.FormatPrice(armorPrice.Value)}";
-            if (Settings.EnableColorCoding.Value)
+            // 检查是否可以在跳蚤市场出售
+            bool showRagfairPrice = RagfairHelper.ShouldShowRagfairPrice(armor);
+
+            // 显示跳蚤市场价格（仅当不禁售时）
+            if (showRagfairPrice)
             {
-                priceText = PriceColorCoding.ApplyColor(priceText, pricePerSlotForColor);
+                string priceText = $"跳蚤市场: {TextFormatting.FormatPrice(armorPrice.Value)}";
+                if (Settings.EnableColorCoding.Value)
+                {
+                    priceText = PriceColorCoding.ApplyColor(priceText, pricePerSlotForColor);
+                }
+                if (Settings.ShowBestPriceInBold.Value)
+                {
+                    priceText = TextFormatting.Bold(priceText);
+                }
+                sb.Append($"\n{priceText}");
             }
-            if (Settings.ShowBestPriceInBold.Value)
-            {
-                priceText = TextFormatting.Bold(priceText);
-            }
-            sb.Append($"\n{priceText}");
 
             // 显示商人回收价格（单独一行）
             AppendTraderPriceIfEnabled(sb, armor);
@@ -1047,17 +1256,23 @@ namespace QuickPrice.Patches
             // 计算单格价值（用于颜色编码）
             double pricePerSlotForColor = slots > 0 ? platePrice.Value / slots : platePrice.Value;
 
-            // 显示跳蚤市场价格
-            string priceText = $"跳蚤市场: {TextFormatting.FormatPrice(platePrice.Value)}";
-            if (Settings.EnableColorCoding.Value)
+            // 检查是否可以在跳蚤市场出售
+            bool showRagfairPrice = RagfairHelper.ShouldShowRagfairPrice(plate);
+
+            // 显示跳蚤市场价格（仅当不禁售时）
+            if (showRagfairPrice)
             {
-                priceText = PriceColorCoding.ApplyColor(priceText, pricePerSlotForColor);
+                string priceText = $"跳蚤市场: {TextFormatting.FormatPrice(platePrice.Value)}";
+                if (Settings.EnableColorCoding.Value)
+                {
+                    priceText = PriceColorCoding.ApplyColor(priceText, pricePerSlotForColor);
+                }
+                if (Settings.ShowBestPriceInBold.Value)
+                {
+                    priceText = TextFormatting.Bold(priceText);
+                }
+                sb.Append($"\n{priceText}");
             }
-            if (Settings.ShowBestPriceInBold.Value)
-            {
-                priceText = TextFormatting.Bold(priceText);
-            }
-            sb.Append($"\n{priceText}");
 
             // 显示商人回收价格（单独一行）
             AppendTraderPriceIfEnabled(sb, plate);
@@ -1132,17 +1347,23 @@ namespace QuickPrice.Patches
             // 计算单格价值（用于颜色编码）
             double pricePerSlotForColor = slots > 0 ? totalPrice / slots : totalPrice;
 
-            // 显示总价
-            string totalPriceText = $"跳蚤市场: {TextFormatting.FormatPrice(totalPrice)}";
-            if (Settings.EnableColorCoding.Value)
+            // 检查是否可以在跳蚤市场出售
+            bool showRagfairPrice = RagfairHelper.ShouldShowRagfairPrice(mod);
+
+            // 显示总价（仅当不禁售时）
+            if (showRagfairPrice)
             {
-                totalPriceText = PriceColorCoding.ApplyColor(totalPriceText, pricePerSlotForColor);
+                string totalPriceText = $"跳蚤市场: {TextFormatting.FormatPrice(totalPrice)}";
+                if (Settings.EnableColorCoding.Value)
+                {
+                    totalPriceText = PriceColorCoding.ApplyColor(totalPriceText, pricePerSlotForColor);
+                }
+                if (Settings.ShowBestPriceInBold.Value)
+                {
+                    totalPriceText = TextFormatting.Bold(totalPriceText);
+                }
+                sb.Append($"\n{totalPriceText}");
             }
-            if (Settings.ShowBestPriceInBold.Value)
-            {
-                totalPriceText = TextFormatting.Bold(totalPriceText);
-            }
-            sb.Append($"\n{totalPriceText}");
 
             // 显示商人回收价格（单独一行）
             AppendTraderPriceIfEnabled(sb, mod);
@@ -1328,6 +1549,50 @@ namespace QuickPrice.Patches
                 return "";
             }
 
+            // 检查是否可以在跳蚤市场出售（统一定义在最外层）
+            bool showRagfairPrice = RagfairHelper.ShouldShowRagfairPrice(container);
+
+            // ===== 新增：检查是否完全禁用容器内物品计算 =====
+            if (!Settings.EnableContainerPriceCalculation.Value)
+            {
+                // 完全禁用容器内物品计算：仅显示容器本身价格
+                double pricePerSlotForColor = slots > 0 ? containerPrice.Value / slots : containerPrice.Value;
+
+                // 显示容器本身价格（仅当不禁售时）
+                if (showRagfairPrice)
+                {
+                    string containerPriceText = $"跳蚤市场: {TextFormatting.FormatPrice(containerPrice.Value)}";
+                    if (Settings.EnableColorCoding.Value)
+                    {
+                        containerPriceText = PriceColorCoding.ApplyColor(containerPriceText, pricePerSlotForColor);
+                    }
+                    if (Settings.ShowBestPriceInBold.Value)
+                    {
+                        containerPriceText = TextFormatting.Bold(containerPriceText);
+                    }
+                    sb.Append($"\n{containerPriceText}");
+                }
+
+                // 显示商人回收价格（单独一行）
+                AppendTraderPriceIfEnabled(sb, container);
+
+                // 显示单格价值（如果启用）
+                if (Settings.ShowPricePerSlot.Value && slots > 1)
+                {
+                    double pricePerSlot = containerPrice.Value / slots;
+                    sb.Append($"\n单格: {TextFormatting.FormatPrice(pricePerSlot)}");
+                }
+
+                // 显示容器本身价格
+                sb.Append($"\n容器价值: {TextFormatting.FormatPrice(containerPrice.Value)}");
+
+                // 显示提示信息
+                sb.Append($"\nℹ️ 已禁用容器内物品计算");
+                sb.Append($"\n可在配置中启用");
+
+                return sb.ToString();
+            }
+
             // 快速估算容器内物品数量
             int estimatedItemCount = EstimateContainerItemCount(container);
 
@@ -1338,17 +1603,20 @@ namespace QuickPrice.Patches
                 // 大容器：仅显示容器本身价格 + 警告
                 double pricePerSlotForColor = slots > 0 ? containerPrice.Value / slots : containerPrice.Value;
 
-                // 显示容器本身价格
-                string containerPriceText = $"跳蚤市场: {TextFormatting.FormatPrice(containerPrice.Value)}";
-                if (Settings.EnableColorCoding.Value)
+                // 显示容器本身价格（仅当不禁售时）
+                if (showRagfairPrice)
                 {
-                    containerPriceText = PriceColorCoding.ApplyColor(containerPriceText, pricePerSlotForColor);
+                    string containerPriceText = $"跳蚤市场: {TextFormatting.FormatPrice(containerPrice.Value)}";
+                    if (Settings.EnableColorCoding.Value)
+                    {
+                        containerPriceText = PriceColorCoding.ApplyColor(containerPriceText, pricePerSlotForColor);
+                    }
+                    if (Settings.ShowBestPriceInBold.Value)
+                    {
+                        containerPriceText = TextFormatting.Bold(containerPriceText);
+                    }
+                    sb.Append($"\n{containerPriceText}");
                 }
-                if (Settings.ShowBestPriceInBold.Value)
-                {
-                    containerPriceText = TextFormatting.Bold(containerPriceText);
-                }
-                sb.Append($"\n{containerPriceText}");
 
                 // 显示商人回收价格（单独一行）
                 AppendTraderPriceIfEnabled(sb, container);
@@ -1371,8 +1639,9 @@ namespace QuickPrice.Patches
                 return sb.ToString();
             }
 
-            // 小容器：正常计算所有物品价值
-            double itemsPrice = CalculateContainerItemsPrice(container, 0);
+            // 小容器：正常计算所有物品价值（传递一个计数器引用）
+            var itemCounter = new ItemCounter();
+            double itemsPrice = CalculateContainerItemsPrice(container, 0, itemCounter);
 
             // 总价 = 容器 + 内部物品
             double totalPrice = containerPrice.Value + itemsPrice;
@@ -1380,17 +1649,20 @@ namespace QuickPrice.Patches
             // 计算单格价值（用于颜色编码）
             double totalPricePerSlot = slots > 0 ? totalPrice / slots : totalPrice;
 
-            // 显示总价
-            string totalPriceText = $"跳蚤市场: {TextFormatting.FormatPrice(totalPrice)}";
-            if (Settings.EnableColorCoding.Value)
+            // 显示总价（仅当不禁售时）
+            if (showRagfairPrice)
             {
-                totalPriceText = PriceColorCoding.ApplyColor(totalPriceText, totalPricePerSlot);
+                string totalPriceText = $"跳蚤市场: {TextFormatting.FormatPrice(totalPrice)}";
+                if (Settings.EnableColorCoding.Value)
+                {
+                    totalPriceText = PriceColorCoding.ApplyColor(totalPriceText, totalPricePerSlot);
+                }
+                if (Settings.ShowBestPriceInBold.Value)
+                {
+                    totalPriceText = TextFormatting.Bold(totalPriceText);
+                }
+                sb.Append($"\n{totalPriceText}");
             }
-            if (Settings.ShowBestPriceInBold.Value)
-            {
-                totalPriceText = TextFormatting.Bold(totalPriceText);
-            }
-            sb.Append($"\n{totalPriceText}");
 
             // 显示商人回收价格（单独一行）
             AppendTraderPriceIfEnabled(sb, container);
@@ -1411,6 +1683,13 @@ namespace QuickPrice.Patches
             {
                 sb.Append(" (空)");
             }
+            else if (itemCounter.WasLimited)
+            {
+                // 如果计算被限制，显示警告
+                sb.Append($" ⚠️");
+                sb.Append($"\n计算已达上限（{itemCounter.Count}个物品）");
+                sb.Append($"\n实际价值可能更高");
+            }
 
             return sb.ToString();
         }
@@ -1420,12 +1699,23 @@ namespace QuickPrice.Patches
         /// </summary>
         /// <param name="container">容器物品</param>
         /// <param name="depth">递归深度（防止栈溢出）</param>
+        /// <param name="itemCounter">物品计数器（追踪已计算的物品数）</param>
         /// <returns>容器内所有物品的总价值</returns>
-        private static double CalculateContainerItemsPrice(Item container, int depth)
+        private static double CalculateContainerItemsPrice(Item container, int depth, ItemCounter itemCounter)
         {
-            // 防止栈溢出：使用配置的最大递归深度（默认5层，原版50层）
+            // 防止栈溢出：使用配置的最大递归深度（默认10层）
             if (depth >= Settings.MaxContainerDepth.Value)
             {
+                Plugin.Log.LogWarning($"⚠️ 容器递归深度达到限制 ({Settings.MaxContainerDepth.Value}层)");
+                return 0;
+            }
+
+            // ===== 修复：提前检查物品数量限制 =====
+            int maxItems = Settings.MaxContainerItems.Value;
+            if (maxItems > 0 && itemCounter.Count >= maxItems)
+            {
+                Plugin.Log.LogWarning($"⚠️ 容器物品数量达到限制 ({maxItems}个)，停止计算");
+                itemCounter.WasLimited = true;
                 return 0;
             }
 
@@ -1480,8 +1770,6 @@ namespace QuickPrice.Patches
 
                 // Plugin.Log.LogInfo($"  {new string(' ', depth * 2)}📦 容器有 {gridsList.Count} 个网格");
 
-                int itemCount = 0;
-
                 foreach (var grid in gridsList)
                 {
                     if (grid == null)
@@ -1517,13 +1805,12 @@ namespace QuickPrice.Patches
                             continue;
                         }
 
-                        itemCount++;
-
-                        // 检查是否超过物品数量限制（0表示无限制）
-                        int maxItems = Settings.MaxContainerItems.Value;
-                        if (maxItems > 0 && itemCount > maxItems)
+                        // ===== 修复：每个物品处理前检查限制 =====
+                        itemCounter.Count++;
+                        if (maxItems > 0 && itemCounter.Count > maxItems)
                         {
-                            // 超过限制，停止计算
+                            Plugin.Log.LogWarning($"⚠️ 容器物品数量超过限制 ({maxItems}个)，停止计算");
+                            itemCounter.WasLimited = true;
                             return total;
                         }
 
@@ -1534,11 +1821,11 @@ namespace QuickPrice.Patches
                             double itemValue = itemPrice.Value * gridItem.StackObjectsCount;
                             total += itemValue;
 
-                            // Plugin.Log.LogInfo($"  {new string(' ', depth * 2)}    ✅ 物品 #{itemCount}: {gridItem.LocalizedName()} = {itemValue:N0}₽");
+                            // Plugin.Log.LogInfo($"  {new string(' ', depth * 2)}    ✅ 物品 #{itemCounter.Count}: {gridItem.LocalizedName()} = {itemValue:N0}₽");
                         }
                         else
                         {
-                            // Plugin.Log.LogInfo($"  {new string(' ', depth * 2)}    ⚠️ 物品 #{itemCount}: {gridItem.LocalizedName()} 无价格数据");
+                            // Plugin.Log.LogInfo($"  {new string(' ', depth * 2)}    ⚠️ 物品 #{itemCounter.Count}: {gridItem.LocalizedName()} 无价格数据");
                         }
 
                         // 如果是武器，计算配件价值
@@ -1577,14 +1864,14 @@ namespace QuickPrice.Patches
                         if (HasContainer(gridItem))
                         {
                             // Plugin.Log.LogInfo($"  {new string(' ', depth * 2)}      🔍 检测到子容器: {gridItem.LocalizedName()}");
-                            double subContainerPrice = CalculateContainerItemsPrice(gridItem, depth + 1);
+                            double subContainerPrice = CalculateContainerItemsPrice(gridItem, depth + 1, itemCounter);
                             total += subContainerPrice;
                             // Plugin.Log.LogInfo($"  {new string(' ', depth * 2)}      └─ 子容器内容: {subContainerPrice:N0}₽");
                         }
                     }
                 }
 
-                // Plugin.Log.LogInfo($"  {new string(' ', depth * 2)}📊 总计发现 {itemCount} 个物品，总价值 {total:N0}₽");
+                // Plugin.Log.LogInfo($"  {new string(' ', depth * 2)}📊 当前已计算 {itemCounter.Count} 个物品，总价值 {total:N0}₽");
             }
             catch (System.Exception ex)
             {

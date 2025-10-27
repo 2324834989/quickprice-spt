@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(dotnet tool list:*)",
+      "Bash(dotnet tool install:*)",
+      "Bash(test -f:*)",
+      "Read(//d/**)",
+      "Bash(ilspycmd --help:*)",
+      "Bash(ilspycmd:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dir:*)",
+      "Bash(unzip:*)",
+      "Bash(test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -20,6 +20,7 @@ namespace QuickPrice.Config
         public static ConfigEntry<bool> UseCaliberPenetrationPower;
         public static ConfigEntry<bool> ColorItemName;
         public static ConfigEntry<bool> EnablePriceBasedBackgroundColor;
+        public static ConfigEntry<bool> ShowGroundItemPrice;  // 显示地面物品价格（跟随物品名称）
 
         // ===== 2.1 价格颜色阈值 =====
         public static ConfigEntry<int> PriceThreshold1; // 白色→绿色
@@ -47,6 +48,7 @@ namespace QuickPrice.Config
         public static ConfigEntry<CacheMode> PriceCacheMode;    // v2.0: 缓存模式
 
         // ===== 3.1 容器性能优化 =====
+        public static ConfigEntry<bool> EnableContainerPriceCalculation; // 启用容器内物品价格计算
         public static ConfigEntry<int> MaxContainerDepth;        // 最大递归深度
         public static ConfigEntry<int> MaxContainerItems;        // 最大计算物品数
         public static ConfigEntry<bool> SkipLargeContainers;     // 跳过大容器
@@ -170,7 +172,8 @@ namespace QuickPrice.Config
                 "物品名称着色",
                 true,
                 "根据物品价值或穿甲等级给物品名称着色\n" +
-                "普通物品/武器按价格着色 | 子弹/弹匣按穿甲等级着色"
+                "✅ 适用范围：物品栏提示框 + 战局内地面散落物品\n" +
+                "普通物品/武器按价格着色 | 子弹/弹匣按穿甲等级着色 | 护甲按防弹等级着色"
             );
 
             EnablePriceBasedBackgroundColor = config.Bind(
@@ -181,6 +184,16 @@ namespace QuickPrice.Config
                 "无需鼠标悬停，打开物品栏即可看到所有物品已着色\n" +
                 "使用与物品名称相同的价格阈值配置\n" +
                 "注意：可能与 ColorConverterAPI 等其他颜色插件冲突"
+            );
+
+            ShowGroundItemPrice = config.Bind(
+                "2. 显示设置",
+                "地面物品显示价格",
+                true,
+                "在战局内地面散落物品名称后显示价格\n" +
+                "格式：物品名称 (单格价值₽) 或 物品名称 (总价₽)\n" +
+                "颜色会根据单格价值自动调整\n" +
+                "注意：需要启用\"物品名称着色\"选项才会生效"
             );
 
             // ===== 2.1 价格颜色阈值 =====
@@ -337,6 +350,17 @@ namespace QuickPrice.Config
             );
 
             // ===== 3.1 容器性能优化 =====
+            EnableContainerPriceCalculation = config.Bind(
+                "3.1 容器性能优化",
+                "启用容器内物品价格计算",
+                true,
+                "是否计算容器（背包、箱子等）内部物品的价格\n" +
+                "✅ 启用：显示「容器价值 + 内部物品价值」的总价\n" +
+                "❌ 禁用：仅显示容器本身的价格，完全跳过内部物品计算\n" +
+                "⚠️ 如果您的容器物品很多导致卡顿，建议禁用此选项\n" +
+                "推荐：如果经常卡顿则禁用，否则启用"
+            );
+
             MaxContainerDepth = config.Bind(
                 "3.1 容器性能优化",
                 "最大递归深度",
@@ -345,7 +369,8 @@ namespace QuickPrice.Config
                     "容器嵌套计算的最大深度（背包套娃层数限制）\n" +
                     "默认值 10 层，原版为 50 层\n" +
                     "降低此值可显著提升性能，但可能影响深层嵌套容器的准确性\n" +
-                    "推荐值：10-20",
+                    "推荐值：10-20\n" +
+                    "⚠️ 仅在「启用容器内物品价格计算」为 true 时有效",
                     new AcceptableValueRange<int>(1, 50)
                 )
             );
@@ -356,9 +381,10 @@ namespace QuickPrice.Config
                 100,
                 new ConfigDescription(
                     "单个容器最多计算多少个物品的价格\n" +
-                    "超过此数量将停止计算\n" +
+                    "超过此数量将停止计算并显示警告\n" +
                     "默认值 100，设置为 0 表示无限制\n" +
-                    "推荐值：100-200",
+                    "推荐值：50-100\n" +
+                    "⚠️ 仅在「启用容器内物品价格计算」为 true 时有效",
                     new AcceptableValueRange<int>(0, 500)
                 )
             );
@@ -369,19 +395,21 @@ namespace QuickPrice.Config
                 true,
                 "当容器内物品数量超过阈值时，跳过详细价格计算\n" +
                 "仅显示容器本身价格，避免卡顿\n" +
-                "推荐：启用（可避免大型物品箱卡顿）"
+                "推荐：启用（可避免大型物品箱卡顿）\n" +
+                "⚠️ 仅在「启用容器内物品价格计算」为 true 时有效"
             );
 
             LargeContainerThreshold = config.Bind(
                 "3.1 容器性能优化",
                 "大容器物品数阈值",
-                150,
+                50,
                 new ConfigDescription(
                     "当容器内物品数量超过此值时，视为「大容器」\n" +
                     "如果启用了「跳过大容器计算」，将跳过详细计算\n" +
-                    "默认值 150，设置过小可能导致正常容器被跳过\n" +
-                    "推荐值：100-300",
-                    new AcceptableValueRange<int>(10, 1000)
+                    "⚠️ 修复：原默认值 150 太高，改为 50 更合理\n" +
+                    "推荐值：30-100\n" +
+                    "⚠️ 仅在「启用容器内物品价格计算」为 true 时有效",
+                    new AcceptableValueRange<int>(10, 500)
                 )
             );
 
