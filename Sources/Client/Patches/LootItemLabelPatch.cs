@@ -463,11 +463,11 @@ namespace QuickPrice.Patches
                         // 按穿甲等级着色
                         string coloredText = AmmoColorCoding.ApplyPenetrationColor(originalText, firstAmmo.PenetrationPower);
 
-                        // 详细信息：数量、穿甲、口径
+                        // 详细信息：穿甲、口径
                         if (Settings.ShowGroundItemPrice.Value)
                         {
                             string caliber = firstAmmo.Caliber ?? "未知口径";
-                            priceInfo = $" <color=#B0B0B0>({totalPrice:N0}₽ | {ammoCount}发 | 穿甲{firstAmmo.PenetrationPower} | {caliber})</color>";
+                            priceInfo = $" <color=#B0B0B0>({totalPrice:N0}₽ | 穿甲{firstAmmo.PenetrationPower} | {caliber})</color>";
                         }
 
                         return coloredText;
