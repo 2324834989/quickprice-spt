@@ -11,7 +11,9 @@
       "Bash(dotnet build:*)",
       "Bash(dir:*)",
       "Bash(unzip:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(findstr:*)",
+      "Bash(powershell -Command:*)"
     ],
     "deny": [],
     "ask": []

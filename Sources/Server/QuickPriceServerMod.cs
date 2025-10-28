@@ -64,9 +64,9 @@ namespace QuickPrice.Server
                     // 如果logger也不可用，使用备用方式
                     try
                     {
-                        Console.WriteLine("[QuickPrice] PreSptLoadAsync方法发生异常");
-                        Console.WriteLine(ex.Message);
-                        Console.WriteLine(ex.StackTrace);
+                        // Console.WriteLine("[QuickPrice] PreSptLoadAsync方法发生异常");
+                        // Console.WriteLine(ex.Message);
+                        // Console.WriteLine(ex.StackTrace);
                     }
                     catch { /* 忽略无法输出的情况 */ }
                 }

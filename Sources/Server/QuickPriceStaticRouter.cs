@@ -134,7 +134,7 @@ namespace QuickPrice.Server
             catch (Exception ex)
             {
                 _loggerStatic?.Error($"[QuickPrice] Error in GetCurrencyPurchasePrices: {ex.Message}", ex);
-                Console.WriteLine($"[QuickPrice] Error in GetCurrencyPurchasePrices: {ex.Message}");
+                // Console.WriteLine($"[QuickPrice] Error in GetCurrencyPurchasePrices: {ex.Message}");
                 // 返回默认值
                 var fallback = JsonSerializer.Serialize(new CurrencyPurchasePrices { Eur = 153, Usd = 139 });
                 return new ValueTask<string>(fallback);
@@ -196,7 +196,7 @@ namespace QuickPrice.Server
             catch (Exception ex)
             {
                 _loggerStatic?.Error($"[QuickPrice] Error in GetStaticPriceTable: {ex.Message}", ex);
-                Console.WriteLine($"[QuickPrice] Error in GetStaticPriceTable: {ex.Message}");
+                // Console.WriteLine($"[QuickPrice] Error in GetStaticPriceTable: {ex.Message}");
                 var fallback = JsonSerializer.Serialize(new Dictionary<string, double>());
                 return new ValueTask<string>(fallback);
             }
@@ -304,7 +304,7 @@ namespace QuickPrice.Server
             catch (Exception ex)
             {
                 _loggerStatic?.Error($"[QuickPrice] Error in GetDynamicPriceTable: {ex.Message}", ex);
-                Console.WriteLine($"[QuickPrice] Error in GetDynamicPriceTable: {ex.Message}");
+                // Console.WriteLine($"[QuickPrice] Error in GetDynamicPriceTable: {ex.Message}");
                 // 回退到静态价格表
                 return HandleGetStaticPriceTable(url, info, sessionId);
             }
@@ -321,6 +321,8 @@ namespace QuickPrice.Server
             try
             {
                 var bannedItems = new HashSet<string>();
+                int totalItems = 0;
+                int checkedItems = 0;
 
                 if (_databaseServiceStatic != null)
                 {
@@ -331,20 +333,38 @@ namespace QuickPrice.Server
                         // 遍历所有物品模板，检查跳蚤市场相关属性
                         if (tables?.Templates?.Items != null)
                         {
+                            totalItems = tables.Templates.Items.Count;
+                            _loggerStatic?.Info($"[QuickPrice-RagfairBan] 开始检查 {totalItems} 个物品模板...", null);
+
+                            // 打印第一个物品的详细信息（用于调试）
+                            var firstItem = tables.Templates.Items.FirstOrDefault();
+                            if (firstItem.Value != null)
+                            {
+                                var firstItemType = firstItem.Value.GetType();
+                                _loggerStatic?.Info($"[QuickPrice-RagfairBan] 物品模板类型: {firstItemType.FullName}", null);
+
+                                // 列出所有属性名
+                                var props = firstItemType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                                var propNames = string.Join(", ", props.Select(p => p.Name).Take(20));
+                                _loggerStatic?.Info($"[QuickPrice-RagfairBan] 前20个属性: {propNames}", null);
+                            }
+
                             foreach (var itemEntry in tables.Templates.Items)
                             {
                                 try
                                 {
+                                    checkedItems++;
                                     string itemId = itemEntry.Key;
                                     var item = itemEntry.Value;
 
                                     // 使用反射检查物品是否可以在跳蚤市场出售
-                                    // SPT 4.0.0 中物品模板可能有多种结构，需要动态检查
                                     var itemType = item.GetType();
 
                                     // 尝试获取 CanSellOnRagfair 属性
-                                    var canSellProp = itemType.GetProperty("CanSellOnRagfair");
-                                    var canRequireProp = itemType.GetProperty("CanRequireOnRagfair");
+                                    var canSellProp = itemType.GetProperty("CanSellOnRagfair",
+                                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                                    var canRequireProp = itemType.GetProperty("CanRequireOnRagfair",
+                                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
 
                                     bool? canSell = null;
                                     bool? canRequire = null;
@@ -367,30 +387,39 @@ namespace QuickPrice.Server
                                     if (canSell == false || canRequire == false)
                                     {
                                         bannedItems.Add(itemId);
+                                        // 打印前10个禁售物品（用于验证）
+                                        if (bannedItems.Count <= 10)
+                                        {
+                                            _loggerStatic?.Info($"[QuickPrice-RagfairBan] 找到禁售物品: {itemId} (CanSell={canSell}, CanRequire={canRequire})", null);
+                                        }
                                     }
                                 }
-                                catch
+                                catch (Exception itemEx)
                                 {
                                     // 某个物品检查失败，跳过继续处理其他物品
+                                    if (checkedItems <= 5)
+                                    {
+                                        _loggerStatic?.Warning($"[QuickPrice-RagfairBan] 检查物品失败: {itemEx.Message}", null);
+                                    }
                                     continue;
                                 }
                             }
 
-                            _loggerStatic?.Info($"[QuickPrice] Found {bannedItems.Count} ragfair-banned items", null);
+                            _loggerStatic?.Info($"[QuickPrice-RagfairBan] 检查完成: 总共{totalItems}个物品, 检查了{checkedItems}个, 找到{bannedItems.Count}个禁售物品", null);
                         }
                         else
                         {
-                            _loggerStatic?.Warning("[QuickPrice] Templates.Items is null", null);
+                            _loggerStatic?.Warning("[QuickPrice-RagfairBan] Templates.Items is null", null);
                         }
                     }
                     catch (Exception dbEx)
                     {
-                        _loggerStatic?.Error($"[QuickPrice] Error accessing database for banned items: {dbEx.Message}", dbEx);
+                        _loggerStatic?.Error($"[QuickPrice-RagfairBan] Error accessing database: {dbEx.Message}", dbEx);
                     }
                 }
                 else
                 {
-                    _loggerStatic?.Warning("[QuickPrice] DatabaseService is not available for banned items check", null);
+                    _loggerStatic?.Warning("[QuickPrice-RagfairBan] DatabaseService is not available", null);
                 }
 
                 // 返回禁售物品ID列表
@@ -399,8 +428,8 @@ namespace QuickPrice.Server
             }
             catch (Exception ex)
             {
-                _loggerStatic?.Error($"[QuickPrice] Error in GetRagfairBannedItems: {ex.Message}", ex);
-                Console.WriteLine($"[QuickPrice] Error in GetRagfairBannedItems: {ex.Message}");
+                _loggerStatic?.Error($"[QuickPrice-RagfairBan] Error in GetRagfairBannedItems: {ex.Message}", ex);
+                // Console.WriteLine($"[QuickPrice-RagfairBan] Error in GetRagfairBannedItems: {ex.Message}");
                 // 返回空列表
                 var fallback = JsonSerializer.Serialize(new List<string>());
                 return new ValueTask<string>(fallback);

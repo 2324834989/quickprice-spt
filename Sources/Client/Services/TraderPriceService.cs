@@ -63,13 +63,13 @@ namespace QuickPrice.Services
                 {
                     if (!_hasShownInitTip)
                     {
-                        Plugin.Log.LogInfo("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-                        Plugin.Log.LogInfo("💡 首次使用商人价格功能");
-                        Plugin.Log.LogInfo("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-                        Plugin.Log.LogInfo("   请打开任意商人界面（如 Prapor、Therapist）");
-                        Plugin.Log.LogInfo("   然后关闭界面，商人价格功能即可正常使用");
-                        Plugin.Log.LogInfo("   💡 此步骤每次游戏启动只需执行一次");
-                        Plugin.Log.LogInfo("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                        // Plugin.Log.LogInfo("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                        // Plugin.Log.LogInfo("💡 首次使用商人价格功能");
+                        // Plugin.Log.LogInfo("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                        // Plugin.Log.LogInfo("   请打开任意商人界面（如 Prapor、Therapist）");
+                        // Plugin.Log.LogInfo("   然后关闭界面，商人价格功能即可正常使用");
+                        // Plugin.Log.LogInfo("   💡 此步骤每次游戏启动只需执行一次");
+                        // Plugin.Log.LogInfo("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                         _hasShownInitTip = true;
                     }
                     return null;
@@ -147,13 +147,13 @@ namespace QuickPrice.Services
                 // 如果第一次使用时没有找到价格，给出友好提示
                 if (highestPrice == null && !_hasShownInitTip)
                 {
-                    Plugin.Log.LogInfo("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-                    Plugin.Log.LogInfo("💡 首次使用商人价格功能");
-                    Plugin.Log.LogInfo("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-                    Plugin.Log.LogInfo("   请打开任意商人界面（如 Prapor、Therapist）");
-                    Plugin.Log.LogInfo("   然后关闭界面，商人价格功能即可正常使用");
-                    Plugin.Log.LogInfo("   此步骤每次游戏启动只需执行一次");
-                    Plugin.Log.LogInfo("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                    // Plugin.Log.LogInfo("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                    // Plugin.Log.LogInfo("💡 首次使用商人价格功能");
+                    // Plugin.Log.LogInfo("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                    // Plugin.Log.LogInfo("   请打开任意商人界面（如 Prapor、Therapist）");
+                    // Plugin.Log.LogInfo("   然后关闭界面，商人价格功能即可正常使用");
+                    // Plugin.Log.LogInfo("   此步骤每次游戏启动只需执行一次");
+                    // Plugin.Log.LogInfo("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                     _hasShownInitTip = true;
                 }
 
@@ -213,7 +213,7 @@ namespace QuickPrice.Services
         public void ClearCache()
         {
             _priceCache.Clear();
-            Plugin.Log.LogInfo("🔄 商人价格缓存已清除");
+            // Plugin.Log.LogInfo("🔄 商人价格缓存已清除");
         }
 
         /// <summary>

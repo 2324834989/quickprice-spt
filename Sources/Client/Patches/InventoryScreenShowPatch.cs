@@ -52,7 +52,7 @@ namespace QuickPrice.Patches
                 }
 
                 var age = PriceDataService.Instance.GetCacheAge();
-                Plugin.Log.LogInfo($"📦 打开物品栏，缓存已过期 ({age:F0}秒)，开始刷新价格...");
+                // Plugin.Log.LogInfo($"📦 打开物品栏，缓存已过期 ({age:F0}秒)，开始刷新价格...");
 
                 // 异步更新价格（Fire-and-Forget）
                 _ = UpdatePricesAsync();
@@ -77,7 +77,7 @@ namespace QuickPrice.Patches
                 if (success)
                 {
                     var count = PriceDataService.Instance.GetCachedPriceCount();
-                    Plugin.Log.LogInfo($"✅ 价格数据刷新成功: {count} 个物品");
+                    // Plugin.Log.LogInfo($"✅ 价格数据刷新成功: {count} 个物品");
                 }
                 else
                 {

@@ -55,7 +55,7 @@ namespace QuickPrice.Services
                     _priceCache = JsonConvert.DeserializeObject<Dictionary<string, double>>(json);
                     _lastUpdate = DateTime.Now;
 
-                    Plugin.Log.LogInfo($"✅ 价格数据更新成功: {_priceCache.Count} 个物品");
+                    // Plugin.Log.LogInfo($"✅ 价格数据更新成功: {_priceCache.Count} 个物品");
                     return true;
                 }
                 else
@@ -137,7 +137,7 @@ namespace QuickPrice.Services
         /// </summary>
         public void ForceRefresh()
         {
-            Plugin.Log.LogInfo("手动刷新价格数据...");
+            // Plugin.Log.LogInfo("手动刷新价格数据...");
             UpdatePrices(true);
         }
 
@@ -197,7 +197,7 @@ namespace QuickPrice.Services
                             _lastUpdate = DateTime.Now;
                         }
 
-                        Plugin.Log.LogInfo($"✅ 价格数据异步更新成功: {_priceCache.Count} 个物品");
+                        // Plugin.Log.LogInfo($"✅ 价格数据异步更新成功: {_priceCache.Count} 个物品");
                         return true;
                     }
                     else
@@ -275,7 +275,7 @@ namespace QuickPrice.Services
             {
                 try
                 {
-                    Plugin.Log.LogInfo("[跳蚤禁售] 开始异步获取禁售物品列表...");
+                    // Plugin.Log.LogInfo("[跳蚤禁售] 开始异步获取禁售物品列表...");
 
                     string json = RequestHandler.GetJson("/showMeTheMoney/getRagfairBannedItems");
 
@@ -290,7 +290,7 @@ namespace QuickPrice.Services
                             _bannedItemsLastUpdate = DateTime.Now;
                         }
 
-                        Plugin.Log.LogInfo($"[跳蚤禁售] 成功获取 {_ragfairBannedItems.Count} 个禁售物品");
+                        // Plugin.Log.LogInfo($"[跳蚤禁售] 成功获取 {_ragfairBannedItems.Count} 个禁售物品");
                         return true;
                     }
                     else
