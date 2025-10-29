@@ -38,6 +38,7 @@ namespace QuickPrice.Server
 
         // 配置
         private static QuickPriceConfig? _config;
+        private static bool _isInitialized = false; // 防止重复初始化
 
         public QuickPriceStaticRouter(
             JsonUtil jsonUtil,
@@ -48,29 +49,34 @@ namespace QuickPrice.Server
             GetCustomRoutes()
         )
         {
-            // 保存到静态变量供路由处理方法使用
-            _databaseServiceStatic = databaseService;
-            _ragfairOfferServiceStatic = ragfairOfferService;
-            _loggerStatic = logger;
-
-            logger.Info("[QuickPrice] 自定义路由已初始化", null);
-
-            // 加载配置文件
-            LoadConfig();
-
-            // 启动时预加载动态价格缓存（异步，不阻塞启动）
-            // 使用锁防止重复初始化
+            // 使用锁防止重复初始化整个模组
             lock (_cacheLock)
             {
-                if (!_isPreloadStarted)
+                if (_isInitialized)
                 {
-                    _isPreloadStarted = true;
-                    _ = PreloadDynamicPriceCacheAsync();
+                    // 已经初始化过了，只更新服务引用
+                    _databaseServiceStatic = databaseService;
+                    _ragfairOfferServiceStatic = ragfairOfferService;
+                    _loggerStatic = logger;
+                    return;
                 }
-                else
-                {
-                    logger.Info("[QuickPrice] 预加载已启动，跳过重复初始化", null);
-                }
+
+                // 标记为已初始化
+                _isInitialized = true;
+
+                // 保存到静态变量供路由处理方法使用
+                _databaseServiceStatic = databaseService;
+                _ragfairOfferServiceStatic = ragfairOfferService;
+                _loggerStatic = logger;
+
+                logger.Info("[QuickPrice] 自定义路由已初始化", null);
+
+                // 加载配置文件
+                LoadConfig();
+
+                // 启动时预加载动态价格缓存（异步，不阻塞启动）
+                _isPreloadStarted = true;
+                _ = PreloadDynamicPriceCacheAsync();
             }
         }
 
