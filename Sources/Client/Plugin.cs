@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using BepInEx;
@@ -7,6 +8,7 @@ using QuickPrice.Config;
 using QuickPrice.Patches;
 using QuickPrice.Services;
 using QuickPrice.Extensions;
+using EFT.Communications;
 
 namespace QuickPrice
 {
@@ -21,6 +23,10 @@ namespace QuickPrice
         // v2.0: 异步初始化标志
         private static bool _isInitializing = false;
         public static bool IsInitializing => _isInitializing;
+
+        // 价格刷新标志
+        private static bool _isRefreshingPrices = false;
+        private static DateTime _lastManualRefresh = DateTime.MinValue;
 
         private void Awake()
         {
@@ -300,40 +306,124 @@ namespace QuickPrice
         {
             try
             {
-                // 检测重置阈值快捷键
-                if (Input.GetKeyDown(Settings.ResetThresholdsKey.Value))
+                // 检测刷新价格快捷键
+                if (Input.GetKeyDown(Settings.RefreshPricesKey.Value))
                 {
-                    // Log.LogInfo("===========================================");
-                    // Log.LogInfo("  🔄 检测到重置快捷键，开始重置阈值...");
-                    // Log.LogInfo("===========================================");
-
-                    // 调用重置方法
-                    Settings.ResetPriceThresholds();
-
-                    // 显示重置后的值
-                    // Log.LogInfo("📊 价格阈值已重置为默认值:");
-                    // Log.LogInfo($"  白色→绿色: {Settings.PriceThreshold1.Value:N0}");
-                    // Log.LogInfo($"  绿色→蓝色: {Settings.PriceThreshold2.Value:N0}");
-                    // Log.LogInfo($"  蓝色→紫色: {Settings.PriceThreshold3.Value:N0}");
-                    // Log.LogInfo($"  紫色→橙色: {Settings.PriceThreshold4.Value:N0}");
-                    // Log.LogInfo($"  橙色→红色: {Settings.PriceThreshold5.Value:N0}");
-                    // Log.LogInfo("");
-                    // Log.LogInfo("🎯 穿甲阈值已重置为默认值:");
-                    // Log.LogInfo($"  白色→绿色: {Settings.PenetrationThreshold1.Value}");
-                    // Log.LogInfo($"  绿色→蓝色: {Settings.PenetrationThreshold2.Value}");
-                    // Log.LogInfo($"  蓝色→紫色: {Settings.PenetrationThreshold3.Value}");
-                    // Log.LogInfo($"  紫色→橙色: {Settings.PenetrationThreshold4.Value}");
-                    // Log.LogInfo($"  橙色→红色: {Settings.PenetrationThreshold5.Value}");
-                    // Log.LogInfo("===========================================");
-                    // Log.LogInfo("  ✅ 重置完成！配置已保存");
-                    // Log.LogInfo("  💾 配置文件: BepInEx/config/QuickPrice.cfg");
-                    // Log.LogInfo("  ℹ️  立即生效，无需重启游戏");
-                    // Log.LogInfo("===========================================");
+                    // 启动异步刷新（Fire-and-Forget）
+                    _ = RefreshPricesManuallyAsync();
                 }
             }
             catch (System.Exception ex)
             {
                 Log.LogError($"❌ 快捷键检测失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 手动刷新价格缓存（快捷键触发）
+        /// </summary>
+        private async Task RefreshPricesManuallyAsync()
+        {
+            // 防止重复刷新
+            if (_isRefreshingPrices)
+            {
+                Log.LogWarning("⚠️ 价格刷新已在进行中，请稍候...");
+                // 显示游戏内通知
+                NotificationManagerClass.DisplayMessageNotification("QuickPrice: 价格刷新已在进行中...", ENotificationDurationType.Default);
+                return;
+            }
+
+            // 防抖：距离上次手动刷新至少5秒
+            var timeSinceLastRefresh = (DateTime.Now - _lastManualRefresh).TotalSeconds;
+            if (timeSinceLastRefresh < 5)
+            {
+                Log.LogWarning($"⚠️ 刷新过于频繁，请等待 {5 - (int)timeSinceLastRefresh} 秒后再试");
+                // 显示游戏内通知
+                NotificationManagerClass.DisplayMessageNotification(
+                    $"QuickPrice: 请等待 {5 - (int)timeSinceLastRefresh} 秒后再试",
+                    ENotificationDurationType.Default);
+                return;
+            }
+
+            _isRefreshingPrices = true;
+            _lastManualRefresh = DateTime.Now;
+
+            try
+            {
+                Log.LogInfo("===========================================");
+                Log.LogInfo("  🔄 开始手动刷新跳蚤市场价格...");
+                Log.LogInfo($"  模式: {(Settings.UseDynamicPrices.Value ? "动态价格" : "静态价格")}");
+                Log.LogInfo("===========================================");
+
+                // 显示开始刷新的游戏内通知
+                string priceMode = Settings.UseDynamicPrices.Value ? "跳蚤市场" : "静态";
+                NotificationManagerClass.DisplayMessageNotification(
+                    $"QuickPrice: 正在获取{priceMode}报价...",
+                    ENotificationDurationType.Long);
+
+                var startTime = DateTime.Now;
+
+                // 强制刷新价格数据
+                var success = await PriceDataService.Instance.UpdatePricesAsync(force: true);
+
+                var duration = (DateTime.Now - startTime).TotalSeconds;
+
+                if (success)
+                {
+                    var count = PriceDataService.Instance.GetCachedPriceCount();
+                    Log.LogInfo("===========================================");
+                    Log.LogInfo($"  ✅ 价格刷新成功！");
+                    Log.LogInfo($"  📊 物品数量: {count:N0} 个");
+                    Log.LogInfo($"  ⏱️  耗时: {duration:F1} 秒");
+                    Log.LogInfo($"  📅 更新时间: {DateTime.Now:HH:mm:ss}");
+                    Log.LogInfo("===========================================");
+
+                    // 清理地面物品颜色缓存（价格已更新，颜色需要重新计算）
+                    try
+                    {
+                        Patches.LootItemLabelPatch.ClearColorCache();
+                        Log.LogInfo("  🎨 地面物品颜色缓存已清理");
+                    }
+                    catch
+                    {
+                        // 忽略错误（补丁可能未启用）
+                    }
+
+                    Log.LogInfo("  💡 提示: 重新悬停物品即可看到最新价格");
+                    Log.LogInfo("===========================================");
+
+                    // 显示成功的游戏内通知
+                    NotificationManagerClass.DisplayMessageNotification(
+                        $"QuickPrice: 报价同步完成！已更新 {count:N0} 个物品 (耗时 {duration:F1}秒)",
+                        ENotificationDurationType.Long);
+                }
+                else
+                {
+                    Log.LogWarning("===========================================");
+                    Log.LogWarning("  ⚠️ 价格刷新失败");
+                    Log.LogWarning("  💡 请检查服务端是否正常运行");
+                    Log.LogWarning("===========================================");
+
+                    // 显示失败的游戏内通知
+                    NotificationManagerClass.DisplayMessageNotification(
+                        "QuickPrice: 价格刷新失败，请检查服务端",
+                        ENotificationDurationType.Default);
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Log.LogError("===========================================");
+                Log.LogError($"  ❌ 价格刷新异常: {ex.Message}");
+                Log.LogError("===========================================");
+
+                // 显示异常的游戏内通知
+                NotificationManagerClass.DisplayMessageNotification(
+                    $"QuickPrice: 刷新异常 - {ex.Message}",
+                    ENotificationDurationType.Default);
+            }
+            finally
+            {
+                _isRefreshingPrices = false;
             }
         }
 

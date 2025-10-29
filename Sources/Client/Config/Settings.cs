@@ -41,7 +41,7 @@ namespace QuickPrice.Config
         public static ConfigEntry<bool> ShowArmorClass; // 显示护甲等级文字
 
         // ===== 2.4 重置功能 =====
-        public static ConfigEntry<KeyCode> ResetThresholdsKey; // 重置阈值快捷键
+        public static ConfigEntry<string> ResetThresholdsButton; // 重置阈值按钮
 
         // ===== 3. 性能设置 =====
         public static ConfigEntry<bool> UseDynamicPrices;
@@ -58,6 +58,7 @@ namespace QuickPrice.Config
         public static ConfigEntry<bool> ShowTraderPrices;      // 显示商人价格
         public static ConfigEntry<bool> ShowFleaTax;            // 显示跳蚤税费
         public static ConfigEntry<bool> AutoRefreshOnOpenInventory; // 打开物品栏自动刷新
+        public static ConfigEntry<KeyCode> RefreshPricesKey;   // 刷新价格快捷键
 
         // 默认阈值常量
         private const int DEFAULT_PRICE_THRESHOLD_1 = 5000;
@@ -317,15 +318,27 @@ namespace QuickPrice.Config
             );
 
             // ===== 2.4 重置功能 =====
-            ResetThresholdsKey = config.Bind(
+            ResetThresholdsButton = config.Bind(
                 "2.4 重置功能",
-                "重置阈值快捷键",
-                KeyCode.F9,
-                "按此键重置所有价格和穿甲阈值为默认值\n" +
-                "默认快捷键: F9\n" +
-                "重置后立即生效，无需重启游戏\n" +
-                "⚠️ 会覆盖您自定义的阈值配置"
+                "点击重置所有阈值",
+                "点击按钮重置",
+                "点击下方按钮将所有价格和穿甲阈值重置为默认值\n" +
+                "⚠️ 重置后立即生效，会覆盖您的自定义配置\n" +
+                "💡 提示：在配置管理器(F12)中，修改此项的值即可触发重置"
             );
+
+            // 监听重置按钮的值变化
+            ResetThresholdsButton.SettingChanged += (sender, args) =>
+            {
+                // 当配置值改变时，触发重置
+                ResetPriceThresholds();
+                Plugin.Log.LogInfo("===========================================");
+                Plugin.Log.LogInfo("  ✅ 阈值已重置为默认值！");
+                Plugin.Log.LogInfo("  📊 价格阈值: 5K / 18K / 35K / 70K / 180K");
+                Plugin.Log.LogInfo("  🎯 穿甲阈值: 15 / 25 / 35 / 45 / 55");
+                Plugin.Log.LogInfo("  💾 配置已保存，立即生效");
+                Plugin.Log.LogInfo("===========================================");
+            };
 
             // ===== 3. 性能设置 =====
             UseDynamicPrices = config.Bind(
@@ -439,6 +452,17 @@ namespace QuickPrice.Config
                 "不阻塞界面，后台更新\n" +
                 "⚠️ 仅在缓存模式为「5分钟刷新」或「10分钟刷新」时有效\n" +
                 "永久缓存模式下此选项无效"
+            );
+
+            RefreshPricesKey = config.Bind(
+                "4. v2.0 新增功能",
+                "刷新价格快捷键",
+                KeyCode.F10,
+                "按此键立即强制刷新跳蚤市场价格缓存\n" +
+                "默认快捷键: F10\n" +
+                "刷新过程异步进行，不会阻塞游戏\n" +
+                "适用于动态价格模式，可随时获取最新跳蚤市场价格\n" +
+                "💡 配合永久缓存模式使用，需要更新价格时手动刷新"
             );
         }
 

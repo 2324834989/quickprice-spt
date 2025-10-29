@@ -14,7 +14,9 @@
       "Bash(test:*)",
       "Bash(findstr:*)",
       "Bash(powershell -Command:*)",
-      "Bash(copy:*)"
+      "Bash(copy:*)",
+      "Bash(cmd /c deploy.bat)",
+      "Bash(ls -la \"D:\\C#\\QuickPrice\\Sources\\Client\\release\"\" | grep \".zip \")"
     ],
     "deny": [],
     "ask": []

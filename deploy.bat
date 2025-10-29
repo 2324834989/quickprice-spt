@@ -6,7 +6,7 @@ echo ========================================
 echo.
 
 :: 设置 SPT 安装目录（请修改为您的实际路径）
-set SPT_DIR=C:\SPT
+set SPT_DIR=D:\Apps\TKFBao\TKFClient.0.16.9.0.40087
 
 :: 检查 SPT 目录是否存在
 if not exist "%SPT_DIR%" (
@@ -21,7 +21,7 @@ echo.
 
 :: ========== 部署客户端 ==========
 echo 🖥️  正在部署客户端...
-set CLIENT_ZIP=Sources\Client\release\QuickPrice-1.0.0-df325771-dirty.zip
+set CLIENT_ZIP=Sources\Client\release\QuickPrice-1.1.1-7a60bfc3-dirty.zip
 set CLIENT_TARGET=%SPT_DIR%\BepInEx\plugins\QuickPrice
 
 if not exist "%CLIENT_ZIP%" (
