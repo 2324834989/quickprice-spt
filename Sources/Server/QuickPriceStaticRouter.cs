@@ -28,6 +28,12 @@ namespace QuickPrice.Server
         private static RagfairOfferService? _ragfairOfferServiceStatic;
         private static ISptLogger<QuickPriceStaticRouter>? _loggerStatic;
 
+        // 价格缓存
+        private static Dictionary<string, double>? _cachedDynamicPrices;
+        private static DateTime _lastCacheUpdate = DateTime.MinValue;
+        private static readonly object _cacheLock = new object();
+        private static bool _isUpdatingCache = false;
+
         public QuickPriceStaticRouter(
             JsonUtil jsonUtil,
             DatabaseService databaseService,
@@ -204,6 +210,7 @@ namespace QuickPrice.Server
 
         /// <summary>
         /// 处理获取动态价格表的请求
+        /// 优化版：使用缓存 + 并行查询
         /// </summary>
         private static ValueTask<string> HandleGetDynamicPriceTable(
             string url,
@@ -212,36 +219,96 @@ namespace QuickPrice.Server
         {
             try
             {
-                // 先获取静态价格作为基础
+                // 检查缓存是否有效（5分钟内）
+                var cacheAge = (DateTime.Now - _lastCacheUpdate).TotalMinutes;
+                bool isCacheValid = _cachedDynamicPrices != null && cacheAge < 5;
+
+                if (isCacheValid)
+                {
+                    _loggerStatic?.Info($"[QuickPrice] Returning cached dynamic prices ({_cachedDynamicPrices!.Count} items, cache age: {cacheAge:F1} min)", null);
+                    var json = JsonSerializer.Serialize(_cachedDynamicPrices);
+                    return new ValueTask<string>(json);
+                }
+
+                // 缓存过期或不存在，触发异步更新（不阻塞）
+                if (!_isUpdatingCache)
+                {
+                    _ = UpdateDynamicPriceCacheAsync();
+                }
+
+                // 如果有旧缓存，先返回旧数据（不让客户端等待）
+                if (_cachedDynamicPrices != null)
+                {
+                    _loggerStatic?.Info($"[QuickPrice] Returning stale cache while updating ({_cachedDynamicPrices.Count} items, cache age: {cacheAge:F1} min)", null);
+                    var json = JsonSerializer.Serialize(_cachedDynamicPrices);
+                    return new ValueTask<string>(json);
+                }
+
+                // 如果没有缓存，回退到静态价格
+                _loggerStatic?.Warning("[QuickPrice] No cache available, falling back to static prices", null);
+                return HandleGetStaticPriceTable(url, info, sessionId);
+            }
+            catch (Exception ex)
+            {
+                _loggerStatic?.Error($"[QuickPrice] Error in GetDynamicPriceTable: {ex.Message}", ex);
+                // 回退到静态价格表
+                return HandleGetStaticPriceTable(url, info, sessionId);
+            }
+        }
+
+        /// <summary>
+        /// 异步更新动态价格缓存（并行优化）
+        /// </summary>
+        private static async Task UpdateDynamicPriceCacheAsync()
+        {
+            // 防止重复更新
+            lock (_cacheLock)
+            {
+                if (_isUpdatingCache)
+                {
+                    _loggerStatic?.Info("[QuickPrice] Cache update already in progress, skipping", null);
+                    return;
+                }
+                _isUpdatingCache = true;
+            }
+
+            try
+            {
+                _loggerStatic?.Info("[QuickPrice] Starting dynamic price cache update (parallel mode)...", null);
+                var startTime = DateTime.Now;
+
+                // 获取静态价格作为基础
                 var priceTable = new Dictionary<string, double>();
 
                 if (_databaseServiceStatic != null)
                 {
-                    try
-                    {
-                        var tables = _databaseServiceStatic.GetTables();
+                    var tables = _databaseServiceStatic.GetTables();
 
-                        // 先加载静态价格
-                        if (tables?.Templates?.Prices != null)
+                    // 先加载静态价格
+                    if (tables?.Templates?.Prices != null)
+                    {
+                        foreach (var priceEntry in tables.Templates.Prices)
                         {
-                            foreach (var priceEntry in tables.Templates.Prices)
+                            if (priceEntry.Value > 0)
                             {
-                                if (priceEntry.Value > 0)
-                                {
-                                    priceTable[priceEntry.Key] = priceEntry.Value;
-                                }
+                                priceTable[priceEntry.Key] = priceEntry.Value;
                             }
                         }
+                    }
 
-                        // 然后尝试用跳蚤市场的动态价格覆盖
-                        if (_ragfairOfferServiceStatic != null && priceTable.Count > 0)
+                    // 并行查询跳蚤市场价格
+                    if (_ragfairOfferServiceStatic != null && priceTable.Count > 0)
+                    {
+                        int updatedCount = 0;
+                        var updateLock = new object();
+
+                        // 使用 Parallel.ForEach 并行处理
+                        await Task.Run(() =>
                         {
-                            try
-                            {
-                                int updatedCount = 0;
-
-                                // 遍历每个物品，尝试获取跳蚤市场价格
-                                foreach (var itemId in priceTable.Keys.ToList())
+                            Parallel.ForEach(
+                                priceTable.Keys.ToList(),
+                                new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                                itemId =>
                                 {
                                     try
                                     {
@@ -263,50 +330,46 @@ namespace QuickPrice.Server
                                                 if (prices.Count > 0)
                                                 {
                                                     double avgPrice = prices.Average();
-                                                    priceTable[itemId] = avgPrice;
-                                                    updatedCount++;
+
+                                                    lock (updateLock)
+                                                    {
+                                                        priceTable[itemId] = avgPrice;
+                                                        updatedCount++;
+                                                    }
                                                 }
                                             }
                                         }
                                     }
                                     catch
                                     {
-                                        // 如果某个物品的跳蚤市场数据获取失败，继续处理其他物品
-                                        continue;
+                                        // 某个物品查询失败，继续处理其他物品
                                     }
                                 }
+                            );
+                        });
 
-                                _loggerStatic?.Info($"[QuickPrice] Dynamic price table generated with {priceTable.Count} items ({updatedCount} updated from flea market)", null);
-                            }
-                            catch (Exception fleaEx)
-                            {
-                                _loggerStatic?.Warning($"[QuickPrice] Could not get flea market prices: {fleaEx.Message}", null);
-                            }
-                        }
-                        else
-                        {
-                            _loggerStatic?.Info($"[QuickPrice] Dynamic price table generated with {priceTable.Count} items (flea market data not available)", null);
-                        }
-                    }
-                    catch (Exception dbEx)
-                    {
-                        _loggerStatic?.Error($"[QuickPrice] Error accessing database: {dbEx.Message}", dbEx);
+                        var duration = (DateTime.Now - startTime).TotalSeconds;
+                        _loggerStatic?.Info($"[QuickPrice] Dynamic price cache updated: {priceTable.Count} items ({updatedCount} from flea market) in {duration:F1}s", null);
                     }
                 }
-                else
+
+                // 更新缓存
+                lock (_cacheLock)
                 {
-                    _loggerStatic?.Warning("[QuickPrice] DatabaseService is not available", null);
+                    _cachedDynamicPrices = priceTable;
+                    _lastCacheUpdate = DateTime.Now;
                 }
-
-                var json = JsonSerializer.Serialize(priceTable);
-                return new ValueTask<string>(json);
             }
             catch (Exception ex)
             {
-                _loggerStatic?.Error($"[QuickPrice] Error in GetDynamicPriceTable: {ex.Message}", ex);
-                // Console.WriteLine($"[QuickPrice] Error in GetDynamicPriceTable: {ex.Message}");
-                // 回退到静态价格表
-                return HandleGetStaticPriceTable(url, info, sessionId);
+                _loggerStatic?.Error($"[QuickPrice] Cache update failed: {ex.Message}", ex);
+            }
+            finally
+            {
+                lock (_cacheLock)
+                {
+                    _isUpdatingCache = false;
+                }
             }
         }
 
