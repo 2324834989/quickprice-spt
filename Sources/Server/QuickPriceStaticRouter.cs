@@ -33,6 +33,11 @@ namespace QuickPrice.Server
         private static DateTime _lastCacheUpdate = DateTime.MinValue;
         private static readonly object _cacheLock = new object();
         private static bool _isUpdatingCache = false;
+        private static System.Threading.Timer? _autoRefreshTimer; // 自动刷新定时器
+        private static bool _isPreloadStarted = false; // 防止重复预加载
+
+        // 配置
+        private static QuickPriceConfig? _config;
 
         public QuickPriceStaticRouter(
             JsonUtil jsonUtil,
@@ -48,7 +53,55 @@ namespace QuickPrice.Server
             _ragfairOfferServiceStatic = ragfairOfferService;
             _loggerStatic = logger;
 
-            logger.Info("[QuickPrice] Custom router initialized", null);
+            logger.Info("[QuickPrice] 自定义路由已初始化", null);
+
+            // 加载配置文件
+            LoadConfig();
+
+            // 启动时预加载动态价格缓存（异步，不阻塞启动）
+            // 使用锁防止重复初始化
+            lock (_cacheLock)
+            {
+                if (!_isPreloadStarted)
+                {
+                    _isPreloadStarted = true;
+                    _ = PreloadDynamicPriceCacheAsync();
+                }
+                else
+                {
+                    logger.Info("[QuickPrice] 预加载已启动，跳过重复初始化", null);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 加载配置文件
+        /// </summary>
+        private static void LoadConfig()
+        {
+            try
+            {
+                // 获取模组目录路径
+                var modPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "user", "mods", "QuickPrice");
+                var configPath = Path.Combine(modPath, "config.json");
+
+                if (File.Exists(configPath))
+                {
+                    var jsonContent = File.ReadAllText(configPath);
+                    _config = JsonSerializer.Deserialize<QuickPriceConfig>(jsonContent);
+                    _loggerStatic?.Info($"[QuickPrice] 配置文件已加载 (自动刷新间隔: {_config?.AutoRefreshIntervalMinutes ?? 5} 分钟)", null);
+                }
+                else
+                {
+                    _loggerStatic?.Warning($"[QuickPrice] 配置文件不存在: {configPath}, 将使用默认配置", null);
+                    _config = new QuickPriceConfig();
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggerStatic?.Error($"[QuickPrice] 加载配置文件失败: {ex.Message}, 将使用默认配置", ex);
+                _config = new QuickPriceConfig();
+            }
         }
 
         /// <summary>
@@ -225,7 +278,7 @@ namespace QuickPrice.Server
 
                 if (isCacheValid)
                 {
-                    _loggerStatic?.Info($"[QuickPrice] Returning cached dynamic prices ({_cachedDynamicPrices!.Count} items, cache age: {cacheAge:F1} min)", null);
+                    _loggerStatic?.Info($"[QuickPrice] 返回缓存的动态价格（{_cachedDynamicPrices!.Count} 个物品，缓存年龄: {cacheAge:F1} 分钟）", null);
                     var json = JsonSerializer.Serialize(_cachedDynamicPrices);
                     return new ValueTask<string>(json);
                 }
@@ -239,13 +292,13 @@ namespace QuickPrice.Server
                 // 如果有旧缓存，先返回旧数据（不让客户端等待）
                 if (_cachedDynamicPrices != null)
                 {
-                    _loggerStatic?.Info($"[QuickPrice] Returning stale cache while updating ({_cachedDynamicPrices.Count} items, cache age: {cacheAge:F1} min)", null);
+                    _loggerStatic?.Info($"[QuickPrice] 返回旧缓存数据，同时后台更新（{_cachedDynamicPrices.Count} 个物品，缓存年龄: {cacheAge:F1} 分钟）", null);
                     var json = JsonSerializer.Serialize(_cachedDynamicPrices);
                     return new ValueTask<string>(json);
                 }
 
                 // 如果没有缓存，回退到静态价格
-                _loggerStatic?.Warning("[QuickPrice] No cache available, falling back to static prices", null);
+                _loggerStatic?.Warning("[QuickPrice] 无可用缓存，回退到静态价格", null);
                 return HandleGetStaticPriceTable(url, info, sessionId);
             }
             catch (Exception ex)
@@ -266,7 +319,7 @@ namespace QuickPrice.Server
             {
                 if (_isUpdatingCache)
                 {
-                    _loggerStatic?.Info("[QuickPrice] Cache update already in progress, skipping", null);
+                    _loggerStatic?.Info("[QuickPrice] 缓存更新已在进行中，跳过", null);
                     return;
                 }
                 _isUpdatingCache = true;
@@ -274,7 +327,7 @@ namespace QuickPrice.Server
 
             try
             {
-                _loggerStatic?.Info("[QuickPrice] Starting dynamic price cache update (parallel mode)...", null);
+                _loggerStatic?.Info("[QuickPrice] 开始动态价格缓存更新（并行模式）...", null);
                 var startTime = DateTime.Now;
 
                 // 获取静态价格作为基础
@@ -349,7 +402,7 @@ namespace QuickPrice.Server
                         });
 
                         var duration = (DateTime.Now - startTime).TotalSeconds;
-                        _loggerStatic?.Info($"[QuickPrice] Dynamic price cache updated: {priceTable.Count} items ({updatedCount} from flea market) in {duration:F1}s", null);
+                        _loggerStatic?.Info($"[QuickPrice] 动态价格缓存已更新: {priceTable.Count} 个物品（{updatedCount} 个来自跳蚤市场），耗时 {duration:F1} 秒", null);
                     }
                 }
 
@@ -362,7 +415,7 @@ namespace QuickPrice.Server
             }
             catch (Exception ex)
             {
-                _loggerStatic?.Error($"[QuickPrice] Cache update failed: {ex.Message}", ex);
+                _loggerStatic?.Error($"[QuickPrice] 缓存更新失败: {ex.Message}", ex);
             }
             finally
             {
@@ -370,6 +423,137 @@ namespace QuickPrice.Server
                 {
                     _isUpdatingCache = false;
                 }
+            }
+        }
+
+        /// <summary>
+        /// 服务器启动时预加载动态价格缓存
+        /// </summary>
+        private static async Task PreloadDynamicPriceCacheAsync()
+        {
+            try
+            {
+                // 等待更长时间，确保数据库和跳蚤市场已完全初始化
+                _loggerStatic?.Info("[QuickPrice] 正在等待数据库初始化...", null);
+
+                // 第一阶段：等待数据库就绪
+                int maxRetries = 30;
+                int retryDelayMs = 2000;
+                bool databaseReady = false;
+
+                for (int i = 0; i < maxRetries; i++)
+                {
+                    await Task.Delay(retryDelayMs);
+
+                    try
+                    {
+                        // 尝试访问数据库，检查是否已初始化
+                        if (_databaseServiceStatic != null)
+                        {
+                            var tables = _databaseServiceStatic.GetTables();
+                            if (tables?.Templates?.Prices != null && tables.Templates.Prices.Count > 0)
+                            {
+                                databaseReady = true;
+                                _loggerStatic?.Info($"[QuickPrice] 数据库已就绪（耗时 {(i + 1) * retryDelayMs / 1000} 秒）", null);
+                                break;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // 数据库还未就绪，继续等待
+                        if (i % 5 == 0)  // 每10秒输出一次日志
+                        {
+                            _loggerStatic?.Info($"[QuickPrice] 仍在等待数据库... ({i + 1}/{maxRetries})", null);
+                        }
+                    }
+                }
+
+                if (!databaseReady)
+                {
+                    _loggerStatic?.Warning("========================================", null);
+                    _loggerStatic?.Warning("[QuickPrice] 数据库初始化超时（60秒）", null);
+                    _loggerStatic?.Warning("[QuickPrice] 将在客户端首次请求时重试", null);
+                    _loggerStatic?.Warning("========================================", null);
+                    return;
+                }
+
+                // 第二阶段：额外等待10秒，确保跳蚤市场报价已生成
+                _loggerStatic?.Info("[QuickPrice] 再等待10秒以确保跳蚤市场报价生成完成...", null);
+                await Task.Delay(10000);
+
+                _loggerStatic?.Info("========================================", null);
+                _loggerStatic?.Info("[QuickPrice] 开始预加载动态价格缓存...", null);
+                _loggerStatic?.Info("========================================", null);
+
+                // 调用更新缓存方法
+                await UpdateDynamicPriceCacheAsync();
+
+                if (_cachedDynamicPrices != null && _cachedDynamicPrices.Count > 0)
+                {
+                    _loggerStatic?.Success("========================================", null);
+                    _loggerStatic?.Success($"[QuickPrice] 缓存预加载完成！{_cachedDynamicPrices.Count} 个物品已就绪", null);
+                    _loggerStatic?.Success("[QuickPrice] 客户端现在可以即时获取价格数据！", null);
+                    _loggerStatic?.Success("========================================", null);
+
+                    // 启动定时刷新（每30分钟）
+                    StartAutoRefreshTimer();
+                }
+                else
+                {
+                    _loggerStatic?.Warning("========================================", null);
+                    _loggerStatic?.Warning("[QuickPrice] 缓存预加载失败，将使用静态价格作为备用", null);
+                    _loggerStatic?.Warning("========================================", null);
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggerStatic?.Error($"[QuickPrice] 预加载缓存失败: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 启动自动刷新定时器（根据配置的间隔刷新）
+        /// </summary>
+        private static void StartAutoRefreshTimer()
+        {
+            try
+            {
+                // 获取配置的刷新间隔（默认5分钟）
+                int intervalMinutes = _config?.AutoRefreshIntervalMinutes ?? 5;
+
+                // 如果间隔为0，则禁用自动刷新
+                if (intervalMinutes <= 0)
+                {
+                    _loggerStatic?.Info("[QuickPrice] 自动刷新已禁用 (配置间隔为0)", null);
+                    return;
+                }
+
+                // 如果定时器已存在，先停止
+                _autoRefreshTimer?.Dispose();
+
+                // 创建定时器：根据配置的间隔刷新
+                var refreshInterval = TimeSpan.FromMinutes(intervalMinutes);
+
+                _autoRefreshTimer = new System.Threading.Timer(
+                    async (state) =>
+                    {
+                        _loggerStatic?.Info("========================================", null);
+                        _loggerStatic?.Info($"[QuickPrice] 自动刷新定时器触发（每{intervalMinutes}分钟）", null);
+                        _loggerStatic?.Info("========================================", null);
+
+                        await UpdateDynamicPriceCacheAsync();
+                    },
+                    null,
+                    refreshInterval,  // 首次执行延迟
+                    refreshInterval   // 后续执行间隔
+                );
+
+                _loggerStatic?.Info($"[QuickPrice] 自动刷新定时器已启动（间隔: {intervalMinutes} 分钟）", null);
+            }
+            catch (Exception ex)
+            {
+                _loggerStatic?.Error($"[QuickPrice] 启动自动刷新定时器失败: {ex.Message}", ex);
             }
         }
 

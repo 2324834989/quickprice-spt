@@ -6,10 +6,10 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <OutputType>Library</OutputType>
-        <Version>1.1.1</Version>
+        <Version>1.2.0</Version>
         <AssemblyName>quickprice</AssemblyName>
         <Title>QuickPrice Server Module</Title>
-        <Authors>QuickPrice Team</Authors>
+        <Authors>xiaoluo</Authors>
         <!-- 输出路径设置 -->
         <OutputPath>bin\$(Configuration)\</OutputPath>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>

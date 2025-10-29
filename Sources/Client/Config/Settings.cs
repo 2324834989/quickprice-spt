@@ -62,16 +62,16 @@ namespace QuickPrice.Config
 
         // 默认阈值常量
         private const int DEFAULT_PRICE_THRESHOLD_1 = 5000;
-        private const int DEFAULT_PRICE_THRESHOLD_2 = 18000;
-        private const int DEFAULT_PRICE_THRESHOLD_3 = 35000;
-        private const int DEFAULT_PRICE_THRESHOLD_4 = 70000;
-        private const int DEFAULT_PRICE_THRESHOLD_5 = 180000;
+        private const int DEFAULT_PRICE_THRESHOLD_2 = 25000;
+        private const int DEFAULT_PRICE_THRESHOLD_3 = 60000;
+        private const int DEFAULT_PRICE_THRESHOLD_4 = 100000;
+        private const int DEFAULT_PRICE_THRESHOLD_5 = 200000;
 
-        private const int DEFAULT_PENETRATION_THRESHOLD_1 = 15;
-        private const int DEFAULT_PENETRATION_THRESHOLD_2 = 25;
-        private const int DEFAULT_PENETRATION_THRESHOLD_3 = 35;
-        private const int DEFAULT_PENETRATION_THRESHOLD_4 = 45;
-        private const int DEFAULT_PENETRATION_THRESHOLD_5 = 55;
+        private const int DEFAULT_PENETRATION_THRESHOLD_1 = 20;
+        private const int DEFAULT_PENETRATION_THRESHOLD_2 = 30;
+        private const int DEFAULT_PENETRATION_THRESHOLD_3 = 40;
+        private const int DEFAULT_PENETRATION_THRESHOLD_4 = 50;
+        private const int DEFAULT_PENETRATION_THRESHOLD_5 = 60;
 
         private static ConfigFile _configFile; // 保存 ConfigFile 引用用于重置
 

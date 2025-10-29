@@ -28,7 +28,7 @@ namespace QuickPrice.Server
         /// <summary>
         /// Mod的作者
         /// </summary>
-        public override string Author { get; init; } = "QuickPrice Team";
+        public override string Author { get; init; } = "xiaoluo";
 
         /// <summary>
         /// Mod的版本号
