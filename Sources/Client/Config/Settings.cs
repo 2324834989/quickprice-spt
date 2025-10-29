@@ -201,7 +201,7 @@ namespace QuickPrice.Config
             PriceThreshold1 = config.Bind(
                 "2.1 价格颜色阈值",
                 "阈值1 - 白色→绿色",
-                5000,
+                DEFAULT_PRICE_THRESHOLD_1,
                 new ConfigDescription(
                     "价格 ≤ 此值显示白色，> 此值显示绿色或更高等级",
                     new AcceptableValueRange<int>(0, 1000000)
@@ -211,7 +211,7 @@ namespace QuickPrice.Config
             PriceThreshold2 = config.Bind(
                 "2.1 价格颜色阈值",
                 "阈值2 - 绿色→蓝色",
-                18000,
+                DEFAULT_PRICE_THRESHOLD_2,
                 new ConfigDescription(
                     "价格 ≤ 此值显示绿色，> 此值显示蓝色或更高等级",
                     new AcceptableValueRange<int>(0, 1000000)
@@ -221,7 +221,7 @@ namespace QuickPrice.Config
             PriceThreshold3 = config.Bind(
                 "2.1 价格颜色阈值",
                 "阈值3 - 蓝色→紫色",
-                35000,
+                DEFAULT_PRICE_THRESHOLD_3,
                 new ConfigDescription(
                     "价格 ≤ 此值显示蓝色，> 此值显示紫色或更高等级",
                     new AcceptableValueRange<int>(0, 1000000)
@@ -231,7 +231,7 @@ namespace QuickPrice.Config
             PriceThreshold4 = config.Bind(
                 "2.1 价格颜色阈值",
                 "阈值4 - 紫色→橙色",
-                70000,
+                DEFAULT_PRICE_THRESHOLD_4,
                 new ConfigDescription(
                     "价格 ≤ 此值显示紫色，> 此值显示橙色或更高等级",
                     new AcceptableValueRange<int>(0, 1000000)
@@ -241,7 +241,7 @@ namespace QuickPrice.Config
             PriceThreshold5 = config.Bind(
                 "2.1 价格颜色阈值",
                 "阈值5 - 橙色→红色",
-                180000,
+                DEFAULT_PRICE_THRESHOLD_5,
                 new ConfigDescription(
                     "价格 ≤ 此值显示橙色，> 此值显示红色",
                     new AcceptableValueRange<int>(0, 1000000)
@@ -252,7 +252,7 @@ namespace QuickPrice.Config
             PenetrationThreshold1 = config.Bind(
                 "2.2 穿甲颜色阈值",
                 "阈值1 - 白色→绿色",
-                15,
+                DEFAULT_PENETRATION_THRESHOLD_1,
                 new ConfigDescription(
                     "穿甲值 < 此值显示白色，≥ 此值显示绿色或更高等级",
                     new AcceptableValueRange<int>(0, 100)
@@ -262,7 +262,7 @@ namespace QuickPrice.Config
             PenetrationThreshold2 = config.Bind(
                 "2.2 穿甲颜色阈值",
                 "阈值2 - 绿色→蓝色",
-                25,
+                DEFAULT_PENETRATION_THRESHOLD_2,
                 new ConfigDescription(
                     "穿甲值 < 此值显示绿色，≥ 此值显示蓝色或更高等级",
                     new AcceptableValueRange<int>(0, 100)
@@ -272,7 +272,7 @@ namespace QuickPrice.Config
             PenetrationThreshold3 = config.Bind(
                 "2.2 穿甲颜色阈值",
                 "阈值3 - 蓝色→紫色",
-                35,
+                DEFAULT_PENETRATION_THRESHOLD_3,
                 new ConfigDescription(
                     "穿甲值 < 此值显示蓝色，≥ 此值显示紫色或更高等级",
                     new AcceptableValueRange<int>(0, 100)
@@ -282,7 +282,7 @@ namespace QuickPrice.Config
             PenetrationThreshold4 = config.Bind(
                 "2.2 穿甲颜色阈值",
                 "阈值4 - 紫色→橙色",
-                45,
+                DEFAULT_PENETRATION_THRESHOLD_4,
                 new ConfigDescription(
                     "穿甲值 < 此值显示紫色，≥ 此值显示橙色或更高等级",
                     new AcceptableValueRange<int>(0, 100)
@@ -292,7 +292,7 @@ namespace QuickPrice.Config
             PenetrationThreshold5 = config.Bind(
                 "2.2 穿甲颜色阈值",
                 "阈值5 - 橙色→红色",
-                55,
+                DEFAULT_PENETRATION_THRESHOLD_5,
                 new ConfigDescription(
                     "穿甲值 < 此值显示橙色，≥ 此值显示红色",
                     new AcceptableValueRange<int>(0, 100)
@@ -332,12 +332,12 @@ namespace QuickPrice.Config
             {
                 // 当配置值改变时，触发重置
                 ResetPriceThresholds();
-                Plugin.Log.LogInfo("===========================================");
-                Plugin.Log.LogInfo("  ✅ 阈值已重置为默认值！");
-                Plugin.Log.LogInfo("  📊 价格阈值: 5K / 18K / 35K / 70K / 180K");
-                Plugin.Log.LogInfo("  🎯 穿甲阈值: 15 / 25 / 35 / 45 / 55");
-                Plugin.Log.LogInfo("  💾 配置已保存，立即生效");
-                Plugin.Log.LogInfo("===========================================");
+                // Plugin.Log.LogInfo("===========================================");
+                // Plugin.Log.LogInfo("  ✅ 阈值已重置为默认值！");
+                // Plugin.Log.LogInfo($"  📊 价格阈值: {DEFAULT_PRICE_THRESHOLD_1 / 1000}K / {DEFAULT_PRICE_THRESHOLD_2 / 1000}K / {DEFAULT_PRICE_THRESHOLD_3 / 1000}K / {DEFAULT_PRICE_THRESHOLD_4 / 1000}K / {DEFAULT_PRICE_THRESHOLD_5 / 1000}K");
+                // Plugin.Log.LogInfo($"  🎯 穿甲阈值: {DEFAULT_PENETRATION_THRESHOLD_1} / {DEFAULT_PENETRATION_THRESHOLD_2} / {DEFAULT_PENETRATION_THRESHOLD_3} / {DEFAULT_PENETRATION_THRESHOLD_4} / {DEFAULT_PENETRATION_THRESHOLD_5}");
+                // Plugin.Log.LogInfo("  💾 配置已保存，立即生效");
+                // Plugin.Log.LogInfo("===========================================");
             };
 
             // ===== 3. 性能设置 =====
