@@ -120,53 +120,71 @@ namespace QuickPrice.Patches
             [HarmonyPrefix]
             public static bool Prefix(ref Task __result, GClass3515 __instance)
             {
-                // 防止递归
                 if (IsProcessing)
                     return true;
 
                 try
                 {
                     IsProcessing = true;
-
-                    // 获取物品价格等级
-                    int priceLevel = SearchSoundPatch.GetItemPriceLevel(__instance.Item);
-
-                    // 根据价格等级计算搜索时间
-                    float searchTime = CalculateSearchTime(priceLevel);
-
-                    // 播放搜索音效
-                    SearchSoundPatch.PlaySound(__instance.Item);
-
-                    // 执行自定义搜索逻辑
-                    __result = ExecuteCustomSearch(__instance, searchTime);
-                    return false; // 跳过原始方法
+                    __result = ExecuteCustomSearch(__instance);
+                    return false;
                 }
                 catch (Exception ex)
                 {
                     Plugin.Log.LogError($"搜索执行失败: {ex.Message}");
                     IsProcessing = false;
-                    return true; // 出错时回退到原始方法
+                    return true;
                 }
             }
 
             /// <summary>
-            /// 执行自定义搜索逻辑
+            /// 执行自定义搜索逻辑 - 为每个物品单独计算搜索时间
             /// </summary>
-            private static async Task ExecuteCustomSearch(GClass3515 __instance, float searchTime)
+            private static async Task ExecuteCustomSearch(GClass3515 __instance)
             {
                 try
                 {
-                    // 等待自定义搜索时间
-                    await Task.Delay(TimeSpan.FromSeconds(searchTime));
+                    if (!__instance.IplayerSearchController_0.ContainsUnknownItems(__instance.Item))
+                        return;
 
-                    // 调用原始搜索逻辑
-                    await CallOriginalMethod6(__instance);
+                    // 获取技能系数（与原代码相同的计算方式）
+                    bool isEquipment = __instance.Item.Parent.GetOwner().RootItem is InventoryEquipment;
+                    IInventoryProfileSkillInfo skillsInfo = __instance.Profile_0.SkillsInfo;
+                    float skillFactor = isEquipment ?
+                        (1f + skillsInfo.AttentionLootSpeedValue + skillsInfo.SearchBuffSpeedValue) :
+                        (1f + skillsInfo.AttentionLootSpeedValue);
 
-                    // 确保物品被正确标记
-                    if (__instance.IplayerSearchController_0.ContainsUnknownItems(__instance.Item))
+                    Item unknownItem;
+                    while (GetUnknownItem(__instance, out unknownItem))
                     {
-                        __instance.IplayerSearchController_0.SetItemAsKnown(__instance.Item, true);
+                        // 为当前未知物品计算价格等级和搜索时间
+                        int priceLevel = GetItemPriceLevel(unknownItem); // 注意：这里使用unknownItem而不是__instance.Item
+                        float baseSearchTime = CalculateSearchTime(priceLevel);
+                        float actualSearchTime = baseSearchTime / skillFactor;
+
+                        // 使用固定延迟，移除随机因素
+                        try
+                        {
+                            await Task.Delay((int)(actualSearchTime * 1000f), __instance.CancellationTokenSource_0.Token);
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            return;
+                        }
+
+                        if (__instance.Boolean_0)
+                            return;
+
+                        // 再次检查并发现物品
+                        Item currentItem;
+                        if (GetUnknownItem(__instance, out currentItem))
+                        {
+                            var discoverMethod = AccessTools.Method(typeof(GClass3515), "DiscoverItem");
+                            discoverMethod?.Invoke(__instance, new object[] { currentItem });
+                        }
                     }
+
+                    __instance.IplayerSearchController_0.OnItemFullySearched();
                 }
                 finally
                 {
@@ -174,42 +192,56 @@ namespace QuickPrice.Patches
                 }
             }
 
+
             /// <summary>
-            /// 调用原始的逻辑
+            /// 获取未知物品（替换原method_7）
             /// </summary>
-            private static async Task CallOriginalMethod6(GClass3515 __instance)
+            private static bool GetUnknownItem(GClass3515 __instance, out Item unknownItem)
             {
-                try
+                foreach (Item item in __instance.Item.GetFirstLevelItems())
                 {
-                    // 使用反射调用原始方法
-                    var originalMethod = AccessTools.Method(typeof(GClass3515), "method_6");
-                    if (originalMethod != null)
+                    if (!__instance.IplayerSearchController_0.IsItemKnown(item, null))
                     {
-                        var task = (Task)originalMethod.Invoke(__instance, null);
-                        if (task != null)
-                        {
-                            await task;
-                        }
+                        unknownItem = item;
+                        return true;
                     }
                 }
-                catch (Exception ex)
-                {
-                    Plugin.Log.LogError($"调用原始搜索方法失败: {ex.Message}");
-                }
+                unknownItem = null;
+                return false;
             }
 
             private static float CalculateSearchTime(int priceLevel)
             {
                 return priceLevel switch
                 {
-                    1 => 0f,
-                    2 => 1.5f,
-                    3 => 2f,
-                    4 => 3f,
-                    5 => 4f,
-                    6 => 5.0f,
-                    _ => 0f
+                    1 => 1f,
+                    2 => 2f,
+                    3 => 3f,
+                    4 => 4f,
+                    5 => 5f,
+                    6 => 6f,
+                    _ => 1f
                 };
+            }
+            /// <summary>
+            /// 根据物品价格计算等级（1-6）- 复用你已有的逻辑
+            /// </summary>
+            public static int GetItemPriceLevel(Item item)
+            {
+                var price = PriceDataService.Instance.GetPrice(item.TemplateId);
+                if (!price.HasValue) return 1;
+
+                // 计算单格价值
+                int slots = item.Width * item.Height;
+                double pricePerSlot = slots > 0 ? price.Value / slots : price.Value;
+
+                // 使用与背景色相同的等级划分逻辑
+                if (pricePerSlot <= Settings.PriceThreshold1.Value) return 1;
+                if (pricePerSlot <= Settings.PriceThreshold2.Value) return 2;
+                if (pricePerSlot <= Settings.PriceThreshold3.Value) return 3;
+                if (pricePerSlot <= Settings.PriceThreshold4.Value) return 4;
+                if (pricePerSlot <= Settings.PriceThreshold5.Value) return 5;
+                return 6;
             }
         }
     }
