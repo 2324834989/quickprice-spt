@@ -9,6 +9,7 @@ using QuickPrice.Patches;
 using QuickPrice.Services;
 using QuickPrice.Extensions;
 using EFT.Communications;
+using HarmonyLib;
 
 namespace QuickPrice
 {
@@ -54,7 +55,7 @@ namespace QuickPrice
 
                 // 注册所有补丁（立即启用）
                 EnableAllPatches();
-
+                new Harmony("com.QuickPrice.Patches").PatchAll();
                 // Log.LogInfo("===========================================");
                 // Log.LogInfo("  🎉 插件启动完成！");
                 // Log.LogInfo("  ⏳ 价格数据正在后台加载...");
